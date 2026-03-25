@@ -67,7 +67,7 @@ def company_required(view_func):
         if not user.is_authenticated:
             return redirect("core:login")
 
-        if getattr(user, "role", None) == "CABINET_ADMIN":
+        if getattr(user, "is_superuser", False) or getattr(user, "role", None) == "CABINET_ADMIN":
             return view_func(*args, **kwargs)
 
         if getattr(user, "company", None) is None:

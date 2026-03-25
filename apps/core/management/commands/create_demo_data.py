@@ -26,6 +26,20 @@ DEMO_REF_PREFIX = "DEMO-"
 DEMO_FORECAST_CAT = "DÉMO_AUTO"
 DEMO_TX_IMPORT = "demo_seed"
 
+# Plan comptable minimal (aligné sur fixtures/initial_data.json) — créé si absent.
+CHART_SEED = [
+    ("411000", "Clients", "ACTIF"),
+    ("512000", "Banque", "ACTIF"),
+    ("401000", "Fournisseurs", "PASSIF"),
+    ("421000", "Personnel", "PASSIF"),
+    ("606300", "Fournitures", "CHARGE"),
+    ("607000", "Achats", "CHARGE"),
+    ("701000", "Ventes produits", "PRODUIT"),
+    ("706000", "Prestations", "PRODUIT"),
+    ("445660", "TVA déductible", "CHARGE"),
+    ("445710", "TVA collectée", "PRODUIT"),
+]
+
 CLIENTS = [
     ("SARL Les Bons Comptes", "contact@bonscomptes.fr"),
     ("EURL Atelier du Nord", "facturation@atelier-nord.fr"),
@@ -62,6 +76,19 @@ BANK_LABELS = [
     "Remise chèques",
     "Frais bancaires",
 ]
+
+
+def _ensure_chart_of_accounts() -> int:
+    """Crée les comptes nécessaires si la base est vide (évite dépendre de loaddata)."""
+    n = 0
+    for num, name, typ in CHART_SEED:
+        _, created = ChartOfAccount.objects.get_or_create(
+            account_number=num,
+            defaults={"name": name, "type": typ, "is_active": True},
+        )
+        if created:
+            n += 1
+    return n
 
 
 def _clear_demo_data() -> None:
@@ -101,8 +128,12 @@ class Command(BaseCommand):
         now = timezone.now()
         today = now.date()
 
+        seeded = _ensure_chart_of_accounts()
+        if seeded:
+            self.stdout.write(self.style.NOTICE(f"Plan comptable : {seeded} compte(s) créé(s)."))
+
         if ChartOfAccount.objects.filter(is_active=True).count() < 4:
-            self.stderr.write("Comptes insuffisants : chargez fixtures/initial_data.json d’abord.")
+            self.stderr.write("Impossible d’obtenir au moins 4 comptes actifs.")
             return
 
         charg = ChartOfAccount.objects.filter(type="CHARGE", is_active=True).first()

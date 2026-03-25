@@ -1,10 +1,13 @@
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
-from decouple import config
 from cryptography.fernet import Fernet
+from decouple import Config, RepositoryEnv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Toujours lire le .env à la racine du projet (évite SQLite si runserver est lancé depuis un autre cwd).
+_env_path = BASE_DIR / ".env"
+config = Config(RepositoryEnv(str(_env_path), encoding="utf-8") if _env_path.is_file() else RepositoryEnv())
 
 SECRET_KEY = config("SECRET_KEY", default="insecure-dev-secret-key")
 # Sans fichier .env, on reste en mode développement (évite page blanche / erreurs silencieuses).
@@ -85,10 +88,10 @@ if DATABASE_URL:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed.path.lstrip("/"),
-            "USER": parsed.username,
-            "PASSWORD": parsed.password,
-            "HOST": parsed.hostname,
+            "NAME": unquote(parsed.path.lstrip("/")),
+            "USER": unquote(parsed.username) if parsed.username else "",
+            "PASSWORD": unquote(parsed.password) if parsed.password else "",
+            "HOST": parsed.hostname or "",
             "PORT": parsed.port or 5432,
         }
     }

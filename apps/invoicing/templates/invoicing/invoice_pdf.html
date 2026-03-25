@@ -1,0 +1,84 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ invoice.number }}</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 24px; }
+      h1 { font-size: 20px; margin: 0 0 10px 0; }
+      .meta { font-size: 12px; color: #444; margin-bottom: 14px; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { border: 1px solid #ddd; padding: 8px; }
+      th { background: #f7f7f7; text-align: left; }
+      .totals { margin-top: 14px; display: flex; justify-content: flex-end; }
+      .totals > div { width: 280px; }
+      .row { display: flex; justify-content: space-between; padding: 4px 0; }
+      .row strong { font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    {% if pdf_html_fallback %}
+      <div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px;margin-bottom:16px;font-size:14px;border-radius:6px;">
+        <strong>Mode secours (sans WeasyPrint)</strong> — Utilisez <strong>Ctrl+P</strong> (ou Fichier → Imprimer),
+        puis « Enregistrer au format PDF » ou « Microsoft Print to PDF ».
+      </div>
+    {% endif %}
+    <h1>Facture {{ invoice.number }}</h1>
+    <div class="meta">
+      Date : {{ invoice.date }}<br />
+      Échéance : {{ invoice.due_date }}<br />
+      Statut : {{ invoice.get_status_display }}<br />
+    </div>
+
+    <div class="meta">
+      <strong>Client :</strong> {{ invoice.client_name }}<br />
+      {% if invoice.client_email %}Email : {{ invoice.client_email }}<br />{% endif %}
+      {% if invoice.client_siret %}SIRET : {{ invoice.client_siret }}<br />{% endif %}
+      {% if invoice.client_address %}Adresse : {{ invoice.client_address }}<br />{% endif %}
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qté</th>
+          <th>PU</th>
+          <th>TVA</th>
+          <th>HT</th>
+          <th>TTC</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in lines %}
+          <tr>
+            <td>{{ l.description }}</td>
+            <td>{{ l.quantity }}</td>
+            <td>{{ l.unit_price }}</td>
+            <td>{{ l.tax_rate }}%</td>
+            <td>{{ l.amount_ht|floatformat:2 }}</td>
+            <td>{{ l.amount_ttc|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">Aucune ligne</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div>
+        <div class="row"><span>Total HT</span><span>{{ invoice.total_ht|floatformat:2 }}</span></div>
+        <div class="row"><span>Total TTC</span><span><strong>{{ invoice.total_ttc|floatformat:2 }}</strong></span></div>
+        {% if invoice.notes %}
+          <div style="margin-top: 12px; font-size: 12px; color: #444;">
+            <strong>Notes</strong><br />
+            {{ invoice.notes }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>
+

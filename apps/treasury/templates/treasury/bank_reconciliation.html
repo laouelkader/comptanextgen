@@ -1,0 +1,113 @@
+{% extends "core/base.html" %}
+{% block title %}Rapprochement bancaire - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="max-w-6xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold">Rapprochement bancaire (MVP)</h1>
+      <a class="border px-3 py-2 rounded text-sm" href="{% url 'treasury:treasury_dashboard' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Retour dashboard</a>
+    </div>
+
+    {% if request.user.role == "CABINET_ADMIN" %}
+      <div class="bg-white border border-gray-200 rounded p-4">
+        <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
+          <div>
+            <label class="text-sm text-gray-700">Entreprise</label>
+            <select name="company_name" class="mt-1 border rounded px-3 py-2">
+              <option value="">-- Sélectionner --</option>
+              {% for c in companies %}
+                <option value="{{ c.nom }}" {% if company_name == c.nom %}selected{% endif %}>{{ c.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Afficher</button>
+        </form>
+      </div>
+    {% endif %}
+
+    <div class="bg-white border border-gray-200 rounded p-4">
+      <div class="font-semibold mb-3">Import relevé bancaire (CSV/XLSX)</div>
+      <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end mb-6">
+        {% csrf_token %}
+        {% if request.user.role == "CABINET_ADMIN" and company_id %}
+          <input type="hidden" name="company_id" value="{{ company_id }}" />
+        {% endif %}
+        <div>
+          <label class="text-sm text-gray-700">Compte bancaire</label>
+          <select name="bank_account_id" class="mt-1 w-full border rounded px-3 py-2">
+            <option value="">-- Sélectionner --</option>
+            {% for a in accounts %}
+              <option value="{{ a.id }}">{{ a.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-700">Fichier</label>
+          <input type="file" name="file" class="mt-1 w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <button class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" type="submit">
+            Importer
+          </button>
+        </div>
+      </form>
+
+      <div class="text-sm text-gray-600 mb-3">Liste des transactions non rapprochées</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 px-4">Date</th>
+              <th class="py-2 px-4">Description</th>
+              <th class="py-2 px-4">Type</th>
+              <th class="py-2 px-4">Montant</th>
+              <th class="py-2 px-4">Action</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-800">
+            {% for t in page_obj %}
+              <tr class="border-t border-gray-100">
+                <td class="py-2 px-4 whitespace-nowrap">{{ t.date }}</td>
+                <td class="py-2 px-4">{{ t.description }}</td>
+                <td class="py-2 px-4">{{ t.transaction_type }}</td>
+                <td class="py-2 px-4 font-semibold">{{ t.amount|floatformat:2 }}</td>
+                <td class="py-2 px-4">
+                  <form method="post">
+                    {% csrf_token %}
+                    {% if request.user.role == "CABINET_ADMIN" and company_name %}
+                      <input type="hidden" name="company_name" value="{{ company_name }}" />
+                    {% endif %}
+                    <input type="hidden" name="bank_transaction_id" value="{{ t.id }}" />
+                    <input type="hidden" name="reconciled_entry_id" value="" />
+                    <button class="border px-3 py-1 rounded text-sm hover:bg-gray-50" type="submit">
+                      Marquer rapprochée
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="py-6 px-4 text-gray-500">Aucune transaction à rapprocher.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if page_obj.paginator.num_pages > 1 %}
+        <div class="flex justify-between items-center mt-4 text-sm text-gray-600">
+          <div>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+          <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+              <a class="border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if bank_account_id %}&bank_account_id={{ bank_account_id }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Précédent</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+              <a class="border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if bank_account_id %}&bank_account_id={{ bank_account_id }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+

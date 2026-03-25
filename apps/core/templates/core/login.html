@@ -1,0 +1,54 @@
+{% extends "core/base.html" %}
+{% block title %}Connexion - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="bg-white border border-gray-200 rounded p-5">
+    <h1 class="text-xl font-bold mb-2">
+      {% if two_factor_required %}Vérification 2FA{% else %}Connexion{% endif %}
+    </h1>
+    <p class="text-sm text-gray-600 mb-4">
+      {% if two_factor_required %}
+        Saisissez le code à 6 chiffres envoyé par email.
+      {% else %}
+        Authentifiez-vous pour accéder à votre espace.
+      {% endif %}
+    </p>
+
+    {% if two_factor_required %}
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {{ two_factor_form.as_p }}
+        <button class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
+          Valider
+        </button>
+      </form>
+    {% else %}
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {{ login_form.as_p }}
+        <button class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
+          Se connecter
+        </button>
+      </form>
+
+      {% if is_debug %}
+        <div class="mt-6 border-t border-gray-200 pt-4 text-xs text-gray-600 space-y-2">
+          <p class="font-semibold text-gray-800">Comptes de démonstration (fixture)</p>
+          <p>Même mot de passe pour tous : <code class="bg-gray-100 px-1 rounded">Aa!234567</code></p>
+          <ul class="list-disc ml-4 space-y-1">
+            <li><strong>admin@comptanextgen.fr</strong> — Cabinet (toutes entreprises, menu « Admin Dashboard », Django admin)</li>
+            <li><strong>gerant.alpha@alpha.fr</strong> — Gérant Alpha SARL</li>
+            <li><strong>comptable.alpha@alpha.fr</strong> — Comptable Alpha SARL</li>
+            <li><strong>collab.alpha@alpha.fr</strong> — Collaborateur Alpha SARL</li>
+            <li><strong>gerant.beta@beta.fr</strong> — Gérant Beta SAS</li>
+            <li><strong>comptable.beta@beta.fr</strong> — Comptable Beta SAS</li>
+            <li><strong>gerant.gamma@gamma.fr</strong> — Gérant Gamma EURL</li>
+            <li><strong>comptable.gamma@gamma.fr</strong> — Comptable Gamma EURL</li>
+          </ul>
+          <p class="text-gray-500">Pour tester un autre profil : déconnexion puis connexion avec un autre email.</p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endblock %}
+

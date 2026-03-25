@@ -1,0 +1,13 @@
+Django==4.2
+psycopg2-binary
+pandas
+openpyxl
+weasyprint
+cryptography
+python-decouple
+Pillow
+xlwt
+django-extensions
+python-dotenv
+gunicorn
+whitenoise

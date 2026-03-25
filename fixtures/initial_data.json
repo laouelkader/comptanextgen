@@ -1,0 +1,329 @@
+[
+  {
+    "model": "core.Company",
+    "pk": 1,
+    "fields": {
+      "nom": "Alpha SARL",
+      "siret": "12345678901234",
+      "iban": "FR7612345678901234567890123",
+      "phone": "0102030405",
+      "email": "contact@alpha.fr",
+      "address": "10 rue de Paris, 75001 Paris",
+      "logo": null,
+      "created_at": "2026-03-25T00:00:00Z",
+      "updated_at": "2026-03-25T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.Company",
+    "pk": 2,
+    "fields": {
+      "nom": "Beta SAS",
+      "siret": "23456789012345",
+      "iban": "FR7623456789012345678901234",
+      "phone": "0607080910",
+      "email": "contact@beta.fr",
+      "address": "20 avenue de Lyon, 69001 Lyon",
+      "logo": null,
+      "created_at": "2026-03-25T00:00:00Z",
+      "updated_at": "2026-03-25T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.Company",
+    "pk": 3,
+    "fields": {
+      "nom": "Gamma EURL",
+      "siret": "34567890123456",
+      "iban": "FR7634567890123456789012345",
+      "phone": "0708091011",
+      "email": "contact@gamma.fr",
+      "address": "5 boulevard de Lille, 59000 Lille",
+      "logo": null,
+      "created_at": "2026-03-25T00:00:00Z",
+      "updated_at": "2026-03-25T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": true,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": true,
+      "is_active": true,
+      "email": "admin@comptanextgen.fr",
+      "username": "",
+      "company": null,
+      "role": "CABINET_ADMIN",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 2,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "email": "gerant.alpha@alpha.fr",
+      "username": "",
+      "company": 1,
+      "role": "MANAGER",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 3,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "email": "comptable.alpha@alpha.fr",
+      "username": "",
+      "company": 1,
+      "role": "ACCOUNTANT",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 4,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "email": "collab.alpha@alpha.fr",
+      "username": "",
+      "company": 1,
+      "role": "COLLABORATOR",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 5,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "email": "gerant.beta@beta.fr",
+      "username": "",
+      "company": 2,
+      "role": "MANAGER",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 6,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "email": "comptable.beta@beta.fr",
+      "username": "",
+      "company": 2,
+      "role": "ACCOUNTANT",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 7,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "email": "gerant.gamma@gamma.fr",
+      "username": "",
+      "company": 3,
+      "role": "MANAGER",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "core.User",
+    "pk": 8,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$1fgzm4kNAK7cIVDjmVut78$In5ZahZnZRo2bG6aFwXrtRCwKySDj/cIzyK9HhxzT8A=",
+      "last_login": null,
+      "is_superuser": false,
+      "first_name": "",
+      "last_name": "",
+      "is_staff": false,
+      "is_active": true,
+      "email": "comptable.gamma@gamma.fr",
+      "username": "",
+      "company": 3,
+      "role": "ACCOUNTANT",
+      "date_joined": "2026-03-25T00:00:00Z",
+      "two_factor_enabled": false,
+      "two_factor_code": null,
+      "two_factor_code_created_at": null
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 1,
+    "fields": {
+      "account_number": "411000",
+      "name": "Clients",
+      "type": "ACTIF",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 2,
+    "fields": {
+      "account_number": "512000",
+      "name": "Banque",
+      "type": "ACTIF",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 3,
+    "fields": {
+      "account_number": "401000",
+      "name": "Fournisseurs",
+      "type": "PASSIF",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 4,
+    "fields": {
+      "account_number": "421000",
+      "name": "Personnel",
+      "type": "PASSIF",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 5,
+    "fields": {
+      "account_number": "606300",
+      "name": "Fournitures",
+      "type": "CHARGE",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 6,
+    "fields": {
+      "account_number": "607000",
+      "name": "Achats",
+      "type": "CHARGE",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 7,
+    "fields": {
+      "account_number": "701000",
+      "name": "Ventes produits",
+      "type": "PRODUIT",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 8,
+    "fields": {
+      "account_number": "706000",
+      "name": "Prestations",
+      "type": "PRODUIT",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 9,
+    "fields": {
+      "account_number": "445660",
+      "name": "TVA deductible",
+      "type": "CHARGE",
+      "parent": null,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounting.ChartOfAccount",
+    "pk": 10,
+    "fields": {
+      "account_number": "445710",
+      "name": "TVA collectée",
+      "type": "PRODUIT",
+      "parent": null,
+      "is_active": true
+    }
+  }
+]
+

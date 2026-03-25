@@ -1,0 +1,79 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>États financiers</title>
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}" />
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+      h1 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+      .section { margin-top: 12px; }
+      .row { display: flex; justify-content: space-between; }
+    </style>
+  </head>
+  <body class="p-6">
+    <h1>États financiers (MVP)</h1>
+    <div class="text-sm text-gray-700 mb-4">
+      Période N : {{ start_date }} -> {{ end_date }}<br />
+      Période N-1 : {{ prev_start_date }} -> {{ prev_end_date }}
+    </div>
+
+    <div class="section">
+      <div class="font-semibold">Bilan</div>
+      <div class="mt-2">
+        <div class="row">
+          <span>Actif (N)</span>
+          <span class="font-semibold">{{ bilan.actif|floatformat:2 }}</span>
+        </div>
+        <div class="row">
+          <span>Passif (N)</span>
+          <span class="font-semibold">{{ bilan.passif|floatformat:2 }}</span>
+        </div>
+        <div class="row mt-2">
+          <span>Actif (N-1)</span>
+          <span class="font-semibold">{{ bilan.actif_prev|floatformat:2 }}</span>
+        </div>
+        <div class="row">
+          <span>Passif (N-1)</span>
+          <span class="font-semibold">{{ bilan.passif_prev|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="font-semibold">Compte de résultat</div>
+      <div class="mt-2">
+        <div class="row">
+          <span>Charges (N)</span>
+          <span class="font-semibold">{{ compte_resultat.charges|floatformat:2 }}</span>
+        </div>
+        <div class="row">
+          <span>Produits (N)</span>
+          <span class="font-semibold">{{ compte_resultat.produits|floatformat:2 }}</span>
+        </div>
+        <div class="row mt-2 border-t pt-2">
+          <span>Résultat (N)</span>
+          {% if compte_resultat.resultat >= 0 %}
+            <span class="font-semibold text-green-700">{{ compte_resultat.resultat|floatformat:2 }}</span>
+          {% else %}
+            <span class="font-semibold text-red-700">{{ compte_resultat.resultat|floatformat:2 }}</span>
+          {% endif %}
+        </div>
+        <div class="row mt-2 border-t pt-2">
+          <span>Charges (N-1)</span>
+          <span class="font-semibold">{{ compte_resultat.charges_prev|floatformat:2 }}</span>
+        </div>
+        <div class="row">
+          <span>Produits (N-1)</span>
+          <span class="font-semibold">{{ compte_resultat.produits_prev|floatformat:2 }}</span>
+        </div>
+        <div class="row mt-2">
+          <span>Résultat (N-1)</span>
+          <span class="font-semibold">{{ compte_resultat.resultat_prev|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

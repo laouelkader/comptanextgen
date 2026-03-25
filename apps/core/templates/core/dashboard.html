@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block title %}Dashboard - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="max-w-5xl mx-auto space-y-6">
+    <h1 class="text-2xl font-bold">Dashboard</h1>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded border border-gray-200 p-4">
+        <div class="text-xs text-gray-500">CA mensuel</div>
+        <div class="text-xl font-semibold">{{ ca_mensuel|floatformat:2 }}</div>
+      </div>
+      <div class="bg-white rounded border border-gray-200 p-4">
+        <div class="text-xs text-gray-500">Solde trésorerie</div>
+        <div class="text-xl font-semibold">{{ solde_tresorerie|floatformat:2 }}</div>
+      </div>
+      <div class="bg-white rounded border border-gray-200 p-4">
+        <div class="text-xs text-gray-500">Factures impayées</div>
+        <div class="text-xl font-semibold">{{ factures_impayees }}</div>
+      </div>
+      <div class="bg-white rounded border border-gray-200 p-4">
+        <div class="text-xs text-gray-500">Écritures ce mois</div>
+        <div class="text-xl font-semibold">{{ nb_ecritures_mois }}</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded border border-gray-200 p-4">
+      <div class="font-semibold mb-2">Alertes (MVP)</div>
+      {% if alertes %}
+        <ul class="list-disc ml-5 text-sm text-gray-700">
+          {% for a in alertes %}
+            <li>{{ a }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-sm text-gray-600">Aucune alerte pour le moment.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+

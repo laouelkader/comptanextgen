@@ -1,0 +1,90 @@
+{% extends "core/base.html" %}
+{% block title %}Trésorerie - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="max-w-6xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold">Tableau de bord Trésorerie</h1>
+      <div class="flex gap-2">
+        <a class="border px-3 py-2 rounded text-sm" href="{% url 'treasury:reconciliation' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Rapprochement</a>
+        <a class="border px-3 py-2 rounded text-sm" href="{% url 'treasury:forecast' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Prévisionnel</a>
+      </div>
+    </div>
+
+    {% if request.user.role == "CABINET_ADMIN" %}
+      <div class="bg-white border border-gray-200 rounded p-4">
+        <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
+          <div>
+            <label class="text-sm text-gray-700">Entreprise</label>
+            <select name="company_name" class="mt-1 border rounded px-3 py-2">
+              <option value="">-- Sélectionner --</option>
+              {% for c in companies %}
+                <option value="{{ c.nom }}" {% if company_name == c.nom %}selected{% endif %}>{{ c.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Afficher</button>
+        </form>
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="bg-white border border-gray-200 rounded p-4">
+        <div class="text-xs text-gray-500">Solde (somme)</div>
+        <div class="text-xl font-semibold">{{ solde|floatformat:2 }}</div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded p-4">
+        <div class="text-xs text-gray-500">Horizon</div>
+        <div class="text-xl font-semibold">{{ horizon_days }} jours</div>
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded p-4">
+      <div class="font-semibold mb-3">Comptes bancaires</div>
+      <div class="space-y-2">
+        {% for a in accounts %}
+          <div class="flex items-center justify-between border-b pb-2">
+            <div>
+              <div class="font-semibold">{{ a.name }}</div>
+              <div class="text-sm text-gray-600">{{ a.is_main|yesno:'Principal,-' }}</div>
+            </div>
+            <div class="font-semibold">{{ a.current_balance|floatformat:2 }}</div>
+          </div>
+        {% empty %}
+          <p class="text-sm text-gray-600">Aucun compte bancaire.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded p-4">
+      <div class="font-semibold mb-3">Encaissements/décaissements à venir (prévisions)</div>
+      {% if forecasts %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="text-left text-gray-500">
+              <tr>
+                <th class="py-2 px-3">Date</th>
+                <th class="py-2 px-3">Description</th>
+                <th class="py-2 px-3">Type</th>
+                <th class="py-2 px-3">Montant</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-800">
+              {% for f in forecasts %}
+                <tr class="border-t border-gray-100">
+                  <td class="py-2 px-3 whitespace-nowrap">{{ f.date }}</td>
+                  <td class="py-2 px-3">{{ f.description }}</td>
+                  <td class="py-2 px-3">{{ f.get_type_display }}</td>
+                  <td class="py-2 px-3 font-semibold">{{ f.amount|floatformat:2 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-600">Aucune prévision sur cette période.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+

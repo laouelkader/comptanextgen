@@ -1,0 +1,99 @@
+{% extends "core/base.html" %}
+{% block title %}Devis - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="max-w-6xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold">Devis</h1>
+      <a class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" href="{% url 'invoicing:quote_add' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+        Nouveau devis
+      </a>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded p-4">
+      <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
+        <div>
+          <label class="text-sm text-gray-700">Statut</label>
+          <select name="status" class="mt-1 w-full border rounded px-3 py-2">
+            <option value="">Tous</option>
+            <option value="DRAFT" {% if status == 'DRAFT' %}selected{% endif %}>Brouillon</option>
+            <option value="SENT" {% if status == 'SENT' %}selected{% endif %}>Envoyé</option>
+            <option value="ACCEPTED" {% if status == 'ACCEPTED' %}selected{% endif %}>Accepté</option>
+            <option value="REFUSED" {% if status == 'REFUSED' %}selected{% endif %}>Refusé</option>
+            <option value="EXPIRED" {% if status == 'EXPIRED' %}selected{% endif %}>Expiré</option>
+          </select>
+        </div>
+        {% if request.user.role == "CABINET_ADMIN" %}
+          <div>
+            <label class="text-sm text-gray-700">Entreprise</label>
+            <select name="company_name" class="mt-1 border rounded px-3 py-2">
+              <option value="">-- Sélectionner --</option>
+              {% for c in companies %}
+                <option value="{{ c.nom }}" {% if company_name == c.nom %}selected{% endif %}>{{ c.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Filtrer</button>
+      </form>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="text-left text-gray-500">
+          <tr>
+            <th class="py-2 px-4">Numéro</th>
+            <th class="py-2 px-4">Date</th>
+            <th class="py-2 px-4">Validité</th>
+            <th class="py-2 px-4">Client</th>
+            <th class="py-2 px-4">Statut</th>
+            <th class="py-2 px-4">Total TTC</th>
+            <th class="py-2 px-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-800">
+          {% for q in page_obj %}
+            <tr class="border-t border-gray-100">
+              <td class="py-2 px-4 whitespace-nowrap font-semibold">{{ q.number }}</td>
+              <td class="py-2 px-4 whitespace-nowrap">{{ q.date }}</td>
+              <td class="py-2 px-4 whitespace-nowrap">{{ q.valid_until }}</td>
+              <td class="py-2 px-4">{{ q.client_name }}</td>
+              <td class="py-2 px-4">{{ q.get_status_display }}</td>
+              <td class="py-2 px-4">{{ q.total_ttc|floatformat:2 }}</td>
+              <td class="py-2 px-4">
+                <form method="post" action="{% url 'invoicing:quote_convert' q.id %}">
+                  {% csrf_token %}
+                  {% if request.user.role == "CABINET_ADMIN" and company_name %}
+                    <input type="hidden" name="company_name" value="{{ company_name }}" />
+                  {% endif %}
+                  <button class="border px-3 py-1 rounded text-sm hover:bg-gray-50" type="submit">
+                    Convertir
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="py-6 px-4 text-gray-500">Aucun devis.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <div class="flex justify-between items-center text-sm text-gray-600">
+        <div>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+        <div class="flex gap-2">
+          {% if page_obj.has_previous %}
+            <a class="border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Précédent</a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a class="border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+

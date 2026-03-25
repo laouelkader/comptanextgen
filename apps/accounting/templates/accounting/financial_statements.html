@@ -1,0 +1,119 @@
+{% extends "core/base.html" %}
+{% block title %}États financiers - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="max-w-6xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold">Bilan & Compte de résultat (MVP)</h1>
+      <div class="flex gap-2">
+        <a class="border px-3 py-2 rounded text-sm" href="{% url 'accounting:statements_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&validated_only={{ validated_only }}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
+          Export Excel
+        </a>
+        <a class="border px-3 py-2 rounded text-sm" href="{% url 'accounting:statements_pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}&validated_only={{ validated_only }}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
+          Export PDF
+        </a>
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded p-4">
+      <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+        <div>
+          <label class="text-sm text-gray-700">Début</label>
+          <input name="start_date" type="date" value="{{ start_date }}" class="mt-1 w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="text-sm text-gray-700">Fin</label>
+          <input name="end_date" type="date" value="{{ end_date }}" class="mt-1 w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="text-sm text-gray-700">Validées</label>
+          <select name="validated_only" class="mt-1 w-full border rounded px-3 py-2">
+            <option value="1" {% if validated_only %}selected{% endif %}>Uniquement</option>
+            <option value="0" {% if not validated_only %}selected{% endif %}>Toutes</option>
+          </select>
+        </div>
+        {% if request.user.role == "CABINET_ADMIN" and companies %}
+          <div class="md:col-span-1">
+            <label class="text-sm text-gray-700">Entreprise</label>
+            <select name="company_name" class="mt-1 w-full border rounded px-3 py-2">
+              <option value="">-- Toutes (consolidé) --</option>
+              {% for c in companies %}
+                <option value="{{ c.nom }}" {% if company_name == c.nom %}selected{% endif %}>{{ c.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="md:col-span-1">
+          <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700 w-full">
+            Mettre à jour
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="bg-white border border-gray-200 rounded p-4">
+        <div class="font-semibold mb-2">Bilan</div>
+        <div class="text-sm text-gray-600 mb-3">
+          Période N : {{ start_date }} -> {{ end_date }} (et N-1 : {{ prev_start_date }} -> {{ prev_end_date }})
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span>Actif (N)</span>
+            <span class="font-semibold">{{ bilan.actif|floatformat:2 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Passif (N)</span>
+            <span class="font-semibold">{{ bilan.passif|floatformat:2 }}</span>
+          </div>
+          <div class="border-t pt-3 mt-2">
+            <div class="flex justify-between">
+              <span>Actif (N-1)</span>
+              <span class="font-semibold">{{ bilan.actif_prev|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Passif (N-1)</span>
+              <span class="font-semibold">{{ bilan.passif_prev|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded p-4">
+        <div class="font-semibold mb-2">Compte de résultat</div>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span>Charges (N)</span>
+            <span class="font-semibold">{{ compte_resultat.charges|floatformat:2 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Produits (N)</span>
+            <span class="font-semibold">{{ compte_resultat.produits|floatformat:2 }}</span>
+          </div>
+          <div class="flex justify-between border-t pt-3 mt-2">
+            <span>Résultat (N)</span>
+            <span class="font-semibold {% if compte_resultat.resultat >= 0 %}text-green-700{% else %}text-red-700{% endif %}">
+              {{ compte_resultat.resultat|floatformat:2 }}
+            </span>
+          </div>
+
+          <div class="border-t pt-3 mt-2">
+            <div class="flex justify-between">
+              <span>Charges (N-1)</span>
+              <span class="font-semibold">{{ compte_resultat.charges_prev|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Produits (N-1)</span>
+              <span class="font-semibold">{{ compte_resultat.produits_prev|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between border-t pt-3 mt-2">
+              <span>Résultat (N-1)</span>
+              <span class="font-semibold">{{ compte_resultat.resultat_prev|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

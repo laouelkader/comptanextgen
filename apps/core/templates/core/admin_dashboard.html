@@ -1,0 +1,104 @@
+{% extends "core/base.html" %}
+{% block title %}Admin Dashboard - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="max-w-6xl mx-auto space-y-6">
+    <h1 class="text-2xl font-bold">Cabinet - Admin Dashboard</h1>
+
+    <div class="bg-white rounded border border-gray-200 p-4">
+      <div class="font-semibold mb-3">Ajouter une entreprise</div>
+      <form method="post" class="space-y-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_company" />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm text-gray-700">Nom</label>
+            {{ company_form.nom }}
+          </div>
+          <div>
+            <label class="text-sm text-gray-700">SIRET</label>
+            {{ company_form.siret }}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm text-gray-700">IBAN</label>
+            {{ company_form.iban }}
+          </div>
+          <div>
+            <label class="text-sm text-gray-700">Téléphone</label>
+            {{ company_form.phone }}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm text-gray-700">Email</label>
+            {{ company_form.email }}
+          </div>
+          <div>
+            <label class="text-sm text-gray-700">Adresse</label>
+            {{ company_form.address }}
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" type="submit">
+            Ajouter l'entreprise
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-white rounded border border-gray-200 p-4">
+        <div class="text-xs text-gray-500">Entreprises</div>
+        <div class="text-xl font-semibold">{{ total_companies }}</div>
+      </div>
+      <div class="bg-white rounded border border-gray-200 p-4">
+        <div class="text-xs text-gray-500">Utilisateurs actifs</div>
+        <div class="text-xl font-semibold">{{ total_users_actifs }}</div>
+      </div>
+      <div class="bg-white rounded border border-gray-200 p-4">
+        <div class="text-xs text-gray-500">Audit trail</div>
+        <div class="text-xl font-semibold">Actif</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded border border-gray-200 p-4">
+      <div class="font-semibold mb-3">Entreprises actives</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">Nom</th>
+              <th class="py-2 pr-4">Email</th>
+              <th class="py-2 pr-4">SIRET</th>
+              <th class="py-2 pr-4">IBAN</th>
+              <th class="py-2 pr-4">Action</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-800">
+            {% for c in companies %}
+              <tr class="border-t border-gray-100">
+                <td class="py-2 pr-4 font-semibold">{{ c.nom }}</td>
+                <td class="py-2 pr-4">{{ c.email|default:"-" }}</td>
+                <td class="py-2 pr-4">{{ c.siret|default:"-" }}</td>
+                <td class="py-2 pr-4">{{ c.iban|default:"-" }}</td>
+                <td class="py-2 pr-4">
+                  <form method="post" onsubmit="return confirm('Supprimer cette entreprise ? (désactivation)');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_company" />
+                    <input type="hidden" name="company_id" value="{{ c.id }}" />
+                    <button class="border border-red-200 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-50" type="submit">
+                      Supprimer
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

@@ -1,0 +1,206 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}ComptaNextGen{% endblock %}</title>
+    <!-- Fallback CSS immédiat : si le build npm n'est pas généré -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}" />
+    <style>
+      /* Harmonisation visuelle des formulaires même sans classes explicites */
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="number"],
+      input[type="date"],
+      input[type="file"],
+      select,
+      textarea {
+        width: 100%;
+        margin-top: 0.25rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        background: #fff;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      }
+      label {
+        display: block;
+      }
+
+      /* Boutons génériques */
+      button {
+        border-radius: 0.5rem;
+        transition: all 0.15s ease;
+      }
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      /* Cartes/pages */
+      .app-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1rem;
+      }
+
+      /* Tableaux */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        font-weight: 600;
+        color: #4b5563;
+        background: #f9fafb;
+      }
+      th, td {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 0.6rem 0.75rem;
+        vertical-align: top;
+      }
+      tr:hover td {
+        background: #fafafa;
+      }
+
+      /* Titres sections */
+      h1 {
+        letter-spacing: -0.01em;
+      }
+      h2, h3 {
+        color: #111827;
+      }
+
+      /* Liens d'action */
+      a {
+        transition: color 0.15s ease;
+      }
+
+      /* Bloc messages plus lisible */
+      .message-box {
+        border-radius: 0.5rem;
+        padding: 0.6rem 0.8rem;
+        font-size: 0.875rem;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-900">
+    <div class="min-h-screen flex">
+      <!-- Sidebar (masquée si non authentifié) -->
+      <aside
+        class="{% if request.user.is_authenticated %}w-64{% else %}w-0{% endif %} hidden md:block
+                {% if request.user.is_authenticated %}block{% else %}hidden{% endif %}
+                bg-white border-r border-gray-200 overflow-hidden"
+      >
+        <div class="p-4 font-semibold text-lg">ComptaNextGen</div>
+        <nav class="px-4 pb-6">
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'core:dashboard' %}">Dashboard</a>
+
+          <div class="mt-4 text-xs font-semibold text-gray-500">Comptabilité</div>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'accounting:entry_list' %}">Écritures</a>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'accounting:statements' %}">États financiers</a>
+
+          <div class="mt-4 text-xs font-semibold text-gray-500">Facturation</div>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'invoicing:invoice_list' %}">Factures</a>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'invoicing:quote_list' %}">Devis</a>
+
+          <div class="mt-4 text-xs font-semibold text-gray-500">Trésorerie</div>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'treasury:treasury_dashboard' %}">Dashboard</a>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'treasury:reconciliation' %}">Rapprochement</a>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'treasury:forecast' %}">Prévisionnel</a>
+
+          <div class="mt-4 text-xs font-semibold text-gray-500">Reporting</div>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'reporting:analytics' %}">Analytics</a>
+          <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'reporting:alerts' %}">Alertes</a>
+
+          {% if request.user.role == "CABINET_ADMIN" %}
+            <div class="mt-4 text-xs font-semibold text-gray-500">Cabinet</div>
+            <a class="block py-2 px-2 rounded hover:bg-gray-100" href="{% url 'core:admin_dashboard' %}">Admin Dashboard</a>
+          {% endif %}
+        </nav>
+      </aside>
+
+      <div class="flex-1">
+        <!-- Header masqué si non authentifié -->
+        <header class="bg-white border-b border-gray-200 {% if not request.user.is_authenticated %}hidden{% endif %}">
+          <div class="flex items-center justify-between px-4 py-3">
+            <div class="md:hidden">
+              <button
+                id="sidebarToggle"
+                class="rounded border border-gray-200 px-3 py-1 text-sm bg-gray-50"
+                type="button"
+              >
+                Menu
+              </button>
+            </div>
+
+            <div class="text-sm text-gray-600">
+              Connecté en tant que <span class="font-semibold">{{ request.user.email }}</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-500 hidden sm:inline">{{ request.user.role }}</span>
+              <a
+                class="text-sm text-red-600 hover:underline"
+                href="{% url 'core:logout' %}"
+                onclick="return confirm('Confirmer la déconnexion ?');"
+              >Déconnexion</a>
+            </div>
+          </div>
+
+          <div class="px-4 pb-3">
+            {% if messages %}
+              <div class="space-y-2">
+                {% for message in messages %}
+                  <div class="message-box text-sm rounded px-3 py-2
+                    {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% endif %}
+                    {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% endif %}
+                    {% if message.tags == 'info' %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}
+                    {% if message.tags == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200{% endif %}
+                  ">
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </header>
+
+        <main class="p-4 {% if not request.user.is_authenticated %}flex items-center justify-center{% endif %}">
+          <div class="{% if request.user.is_authenticated %}max-w-6xl mx-auto{% else %}w-full max-w-md mx-auto{% endif %}">
+            <!-- Messages en mode non-auth -->
+            {% if not request.user.is_authenticated and messages %}
+              <div class="space-y-2 mb-4">
+                {% for message in messages %}
+                  <div class="message-box text-sm rounded px-3 py-2 bg-blue-50 border border-blue-200 text-blue-800">
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const sidebar = document.querySelector('aside');
+      const toggle = document.getElementById('sidebarToggle');
+      if (toggle && sidebar) {
+        toggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
+      }
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% block title %}Historique — {{ document_ref }} - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="max-w-4xl mx-auto space-y-4">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="document-text" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Historique — {{ document_kind_label }} {{ document_ref }}</span>
+      </h1>
+      <a class="inline-flex items-center gap-1.5 text-sm text-indigo-700 hover:underline" href="{{ back_url }}">
+        {% include "core/partials/ui_icon.html" with icon="arrow-left" css_class="w-4 h-4" %}
+        Retour
+      </a>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded divide-y divide-gray-100">
+      {% for e in entries %}
+        <div class="p-4 text-sm">
+          <div class="flex flex-wrap justify-between gap-2 text-gray-800">
+            <span class="font-semibold">{{ e.get_action_display }}</span>
+            <span class="text-gray-500">{{ e.created_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          {% if e.user %}
+            <div class="text-xs text-gray-500 mt-1">Par {{ e.user.get_full_name|default:e.user.email }}</div>
+          {% endif %}
+          {% if e.note %}
+            <div class="text-xs text-gray-600 mt-1">{{ e.note }}</div>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="p-6 text-gray-500">Aucun événement enregistré.</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

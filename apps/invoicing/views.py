@@ -22,17 +22,28 @@ from openpyxl import Workbook
 
 from apps.core.decorators import company_required
 from apps.core.models import Company
+from apps.core.permissions import (
+    can_cancel_invoice,
+    can_cancel_quote,
+    can_convert_quote_to_invoice,
+    can_edit_invoice,
+    can_edit_quote,
+    can_export_invoice_excel,
+    is_collaborator,
+)
 
 from .forms import InvoiceForm, InvoiceLineFormSet, InvoiceLineForm, QuoteForm
-from .models import Invoice, InvoiceLine, Quote
+from .models import BillingDocumentHistory, Invoice, InvoiceLine, Quote
 from .utils import (
+    log_billing_history,
     next_invoice_number,
     next_quote_number,
     process_overdue_invoice_reminders,
     recalc_totals_for_invoice,
     recalc_totals_for_quote,
+    snapshot_invoice,
+    snapshot_quote,
 )
-from .models import InvoiceLine as InvoiceLineModel
 
 
 def _cabinet_admin(request: HttpRequest) -> bool:
@@ -55,6 +66,19 @@ def _companies_for_request(request: HttpRequest):
     if _cabinet_admin(request):
         return Company.objects.filter(is_active=True).order_by("nom")
     return None
+
+
+def _can_access_company_document(request: HttpRequest, doc_company_id: int) -> bool:
+    if _cabinet_admin(request):
+        return True
+    company = getattr(request, "company", None)
+    return company is not None and company.pk == doc_company_id
+
+
+def _cabinet_company_query(request: HttpRequest, company: Company) -> str:
+    if _cabinet_admin(request):
+        return f"?{urlencode({'company_name': company.nom})}"
+    return ""
 
 
 def _base_lines_formset_from_quote(quote: Quote):
@@ -200,6 +224,14 @@ class QuoteCreateView(LoginRequiredMixin, View):
                 )
 
             recalc_totals_for_quote(quote)
+            log_billing_history(
+                company=company,
+                kind=BillingDocumentHistory.Kind.QUOTE,
+                document_id=quote.pk,
+                action=BillingDocumentHistory.Action.CREATED,
+                user=request.user,
+                snapshot=snapshot_quote(quote),
+            )
 
         messages.success(request, "Devis créé.")
         redirect_url = "invoicing:quote_list"
@@ -213,6 +245,10 @@ class QuoteConvertView(LoginRequiredMixin, View):
     template_name = "invoicing/invoice_form.html"
 
     def post(self, request: HttpRequest, quote_id: int):
+        if not can_convert_quote_to_invoice(request.user):
+            messages.error(request, "La conversion devis → facture est réservée au gérant et au comptable.")
+            return redirect("invoicing:quote_list")
+
         quote = get_object_or_404(Quote, pk=quote_id)
         company = _resolve_company(request)
         if company is None:
@@ -248,6 +284,15 @@ class QuoteConvertView(LoginRequiredMixin, View):
                 )
 
             recalc_totals_for_invoice(invoice)
+            log_billing_history(
+                company=quote.company,
+                kind=BillingDocumentHistory.Kind.INVOICE,
+                document_id=invoice.pk,
+                action=BillingDocumentHistory.Action.CREATED,
+                user=request.user,
+                snapshot=snapshot_invoice(invoice),
+                note=f"Conversion depuis devis {quote.number}",
+            )
 
         messages.success(request, "Devis converti en facture.")
         if _cabinet_admin(request):
@@ -387,6 +432,14 @@ class InvoiceCreateView(LoginRequiredMixin, View):
                 )
 
             recalc_totals_for_invoice(invoice)
+            log_billing_history(
+                company=company,
+                kind=BillingDocumentHistory.Kind.INVOICE,
+                document_id=invoice.pk,
+                action=BillingDocumentHistory.Action.CREATED,
+                user=request.user,
+                snapshot=snapshot_invoice(invoice),
+            )
 
         messages.success(request, "Facture créée.")
         if _cabinet_admin(request):
@@ -410,7 +463,8 @@ class InvoicePDFView(LoginRequiredMixin, View):
         ctx = {
             "invoice": invoice,
             "lines": invoice.lines.all().order_by("id"),
-            "pdf_html_fallback": False,
+            "invoice_date_fr": invoice.date.strftime("%d/%m/%Y"),
+            "due_date_fr": invoice.due_date.strftime("%d/%m/%Y"),
         }
         html = render_to_string("invoicing/invoice_pdf.html", ctx, request=request)
 
@@ -419,12 +473,7 @@ class InvoicePDFView(LoginRequiredMixin, View):
 
             pdf_file = WeasyHTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
         except Exception:
-            # Windows / environnement sans GTK : page imprimable (Ctrl+P → Enregistrer au format PDF).
-            return render(
-                request,
-                "invoicing/invoice_pdf.html",
-                {**ctx, "pdf_html_fallback": True},
-            )
+            return render(request, "invoicing/invoice_pdf.html", ctx)
 
         filename = f"{invoice.number}.pdf"
         resp = HttpResponse(pdf_file, content_type="application/pdf")
@@ -435,6 +484,9 @@ class InvoicePDFView(LoginRequiredMixin, View):
 @method_decorator(company_required, name="dispatch")
 class InvoiceExcelExportView(LoginRequiredMixin, View):
     def get(self, request: HttpRequest):
+        if not can_export_invoice_excel(request.user):
+            messages.error(request, "Export Excel réservé au gérant et au comptable.")
+            return redirect("invoicing:invoice_list")
         company = _resolve_company(request)
         if company is None:
             messages.error(request, "Entreprise introuvable.")
@@ -457,3 +509,389 @@ class InvoiceExcelExportView(LoginRequiredMixin, View):
         resp["Content-Disposition"] = 'attachment; filename="invoices.xlsx"'
         return resp
 
+
+@method_decorator(company_required, name="dispatch")
+class QuoteEditView(LoginRequiredMixin, View):
+    template_name = "invoicing/quote_form.html"
+
+    def get(self, request: HttpRequest, quote_id: int):
+        quote = get_object_or_404(Quote, pk=quote_id)
+        if not _can_access_company_document(request, quote.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:quote_list")
+        if not can_edit_quote(request.user, quote):
+            messages.error(request, "Modification non autorisée pour ce devis.")
+            return redirect("invoicing:quote_list")
+
+        form = QuoteForm(
+            initial={
+                "date": quote.date,
+                "valid_until": quote.valid_until,
+                "client_name": quote.client_name,
+                "client_email": quote.client_email or "",
+                "client_address": quote.client_address or "",
+                "client_siret": quote.client_siret or "",
+                "status": quote.status,
+                "notes": quote.notes or "",
+            }
+        )
+        initial_lines = _base_lines_formset_from_quote(quote)
+        formset = InvoiceLineFormSet(initial=initial_lines)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "quote_form": form,
+                "formset": formset,
+                "edit_mode": True,
+                "quote": quote,
+                "company_name": request.GET.get("company_name") or (quote.company.nom if _cabinet_admin(request) else ""),
+                "companies": _companies_for_request(request),
+            },
+        )
+
+    def post(self, request: HttpRequest, quote_id: int):
+        quote = get_object_or_404(Quote, pk=quote_id)
+        if not _can_access_company_document(request, quote.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:quote_list")
+        if not can_edit_quote(request.user, quote):
+            messages.error(request, "Modification non autorisée pour ce devis.")
+            return redirect("invoicing:quote_list")
+
+        quote_form = QuoteForm(request.POST)
+        formset = InvoiceLineFormSet(request.POST)
+        if not quote_form.is_valid() or not formset.is_valid():
+            messages.error(request, "Vérifiez le formulaire (devis/lignes).")
+            return render(
+                request,
+                self.template_name,
+                {
+                    "quote_form": quote_form,
+                    "formset": formset,
+                    "edit_mode": True,
+                    "quote": quote,
+                    "company_name": request.POST.get("company_name"),
+                    "companies": _companies_for_request(request),
+                },
+            )
+
+        has_line = any(
+            f.cleaned_data and not f.cleaned_data.get("__is_empty") for f in formset.forms
+        )
+        if not has_line:
+            messages.error(request, "Ajoutez au moins une ligne avec description, quantité et prix unitaire.")
+            return render(
+                request,
+                self.template_name,
+                {
+                    "quote_form": quote_form,
+                    "formset": formset,
+                    "edit_mode": True,
+                    "quote": quote,
+                    "company_name": request.POST.get("company_name"),
+                    "companies": _companies_for_request(request),
+                },
+            )
+
+        new_status = quote_form.cleaned_data.get("status") or quote.status
+        if is_collaborator(request.user):
+            new_status = Quote.Status.DRAFT
+
+        with transaction.atomic():
+            quote.date = quote_form.cleaned_data["date"]
+            quote.valid_until = quote_form.cleaned_data["valid_until"]
+            quote.client_name = quote_form.cleaned_data["client_name"]
+            quote.client_email = quote_form.cleaned_data.get("client_email") or None
+            quote.client_address = quote_form.cleaned_data.get("client_address") or None
+            quote.client_siret = quote_form.cleaned_data.get("client_siret") or None
+            quote.status = new_status
+            quote.notes = quote_form.cleaned_data.get("notes") or None
+            quote.save()
+
+            quote.lines.all().delete()
+            for lf in formset.forms:
+                if not lf.cleaned_data:
+                    continue
+                if lf.cleaned_data.get("__is_empty"):
+                    continue
+                InvoiceLine.objects.create(
+                    quote=quote,
+                    invoice=None,
+                    description=lf.cleaned_data["description"],
+                    quantity=lf.cleaned_data["quantity"],
+                    unit_price=lf.cleaned_data["unit_price"],
+                    tax_rate=lf.cleaned_data["tax_rate"],
+                )
+
+            recalc_totals_for_quote(quote)
+            log_billing_history(
+                company=quote.company,
+                kind=BillingDocumentHistory.Kind.QUOTE,
+                document_id=quote.pk,
+                action=BillingDocumentHistory.Action.UPDATED,
+                user=request.user,
+                snapshot=snapshot_quote(quote),
+            )
+
+        messages.success(request, "Devis enregistré.")
+        if _cabinet_admin(request):
+            return redirect(f'{reverse("invoicing:quote_list")}?{urlencode({"company_name": quote.company.nom})}')
+        return redirect("invoicing:quote_list")
+
+
+@method_decorator(company_required, name="dispatch")
+class QuoteCancelView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest, quote_id: int):
+        quote = get_object_or_404(Quote, pk=quote_id)
+        if not _can_access_company_document(request, quote.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:quote_list")
+        if not can_cancel_quote(request.user, quote):
+            messages.error(request, "Annulation non autorisée (statut ou droits).")
+            return redirect("invoicing:quote_list")
+
+        with transaction.atomic():
+            quote.status = Quote.Status.CANCELLED
+            quote.save(update_fields=["status"])
+            log_billing_history(
+                company=quote.company,
+                kind=BillingDocumentHistory.Kind.QUOTE,
+                document_id=quote.pk,
+                action=BillingDocumentHistory.Action.CANCELLED,
+                user=request.user,
+                snapshot=snapshot_quote(quote),
+            )
+
+        messages.success(request, "Devis annulé.")
+        if _cabinet_admin(request):
+            return redirect(f'{reverse("invoicing:quote_list")}?{urlencode({"company_name": quote.company.nom})}')
+        return redirect("invoicing:quote_list")
+
+
+@method_decorator(company_required, name="dispatch")
+class QuoteHistoryView(LoginRequiredMixin, View):
+    template_name = "invoicing/billing_history.html"
+
+    def get(self, request: HttpRequest, quote_id: int):
+        quote = get_object_or_404(Quote, pk=quote_id)
+        if not _can_access_company_document(request, quote.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:quote_list")
+
+        entries = BillingDocumentHistory.objects.filter(
+            company_id=quote.company_id,
+            kind=BillingDocumentHistory.Kind.QUOTE,
+            document_id=quote.pk,
+        )
+        return render(
+            request,
+            self.template_name,
+            {
+                "document_kind_label": "Devis",
+                "document_ref": quote.number,
+                "entries": entries,
+                "company_name": request.GET.get("company_name") or (quote.company.nom if _cabinet_admin(request) else ""),
+                "companies": _companies_for_request(request),
+                "back_url": reverse("invoicing:quote_list") + _cabinet_company_query(request, quote.company),
+            },
+        )
+
+
+@method_decorator(company_required, name="dispatch")
+class InvoiceEditView(LoginRequiredMixin, View):
+    template_name = "invoicing/invoice_form.html"
+
+    def get(self, request: HttpRequest, invoice_id: int):
+        invoice = get_object_or_404(Invoice, pk=invoice_id)
+        if not _can_access_company_document(request, invoice.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:invoice_list")
+        if not can_edit_invoice(request.user, invoice):
+            messages.error(request, "Modification non autorisée pour cette facture.")
+            return redirect("invoicing:invoice_list")
+
+        initial_lines = []
+        for line in invoice.lines.all().order_by("id"):
+            initial_lines.append(
+                {
+                    "description": line.description,
+                    "quantity": line.quantity,
+                    "unit_price": line.unit_price,
+                    "tax_rate": str(line.tax_rate),
+                }
+            )
+        form = InvoiceForm(
+            initial={
+                "date": invoice.date,
+                "due_date": invoice.due_date,
+                "client_name": invoice.client_name,
+                "client_email": invoice.client_email or "",
+                "client_address": invoice.client_address or "",
+                "client_siret": invoice.client_siret or "",
+                "status": invoice.status,
+                "notes": invoice.notes or "",
+            }
+        )
+        formset = InvoiceLineFormSet(initial=initial_lines)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "invoice_form": form,
+                "formset": formset,
+                "edit_mode": True,
+                "invoice": invoice,
+                "company_name": request.GET.get("company_name") or (invoice.company.nom if _cabinet_admin(request) else ""),
+                "companies": _companies_for_request(request),
+            },
+        )
+
+    def post(self, request: HttpRequest, invoice_id: int):
+        invoice = get_object_or_404(Invoice, pk=invoice_id)
+        if not _can_access_company_document(request, invoice.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:invoice_list")
+        if not can_edit_invoice(request.user, invoice):
+            messages.error(request, "Modification non autorisée pour cette facture.")
+            return redirect("invoicing:invoice_list")
+
+        invoice_form = InvoiceForm(request.POST)
+        formset = InvoiceLineFormSet(request.POST)
+        if not invoice_form.is_valid() or not formset.is_valid():
+            messages.error(request, "Vérifiez le formulaire (facture/lignes).")
+            return render(
+                request,
+                self.template_name,
+                {
+                    "invoice_form": invoice_form,
+                    "formset": formset,
+                    "edit_mode": True,
+                    "invoice": invoice,
+                    "company_name": request.POST.get("company_name"),
+                    "companies": _companies_for_request(request),
+                },
+            )
+
+        has_line = any(
+            f.cleaned_data and not f.cleaned_data.get("__is_empty") for f in formset.forms
+        )
+        if not has_line:
+            messages.error(request, "Ajoutez au moins une ligne avec description, quantité et prix unitaire.")
+            return render(
+                request,
+                self.template_name,
+                {
+                    "invoice_form": invoice_form,
+                    "formset": formset,
+                    "edit_mode": True,
+                    "invoice": invoice,
+                    "company_name": request.POST.get("company_name"),
+                    "companies": _companies_for_request(request),
+                },
+            )
+
+        new_status = invoice_form.cleaned_data.get("status") or invoice.status
+        if is_collaborator(request.user):
+            new_status = invoice.status
+
+        with transaction.atomic():
+            invoice.date = invoice_form.cleaned_data["date"]
+            invoice.due_date = invoice_form.cleaned_data["due_date"]
+            invoice.client_name = invoice_form.cleaned_data["client_name"]
+            invoice.client_email = invoice_form.cleaned_data.get("client_email") or None
+            invoice.client_address = invoice_form.cleaned_data.get("client_address") or None
+            invoice.client_siret = invoice_form.cleaned_data.get("client_siret") or None
+            invoice.status = new_status
+            invoice.notes = invoice_form.cleaned_data.get("notes") or None
+            invoice.save()
+
+            invoice.lines.all().delete()
+            for lf in formset.forms:
+                if not lf.cleaned_data:
+                    continue
+                if lf.cleaned_data.get("__is_empty"):
+                    continue
+                InvoiceLine.objects.create(
+                    invoice=invoice,
+                    quote=None,
+                    description=lf.cleaned_data["description"],
+                    quantity=lf.cleaned_data["quantity"],
+                    unit_price=lf.cleaned_data["unit_price"],
+                    tax_rate=lf.cleaned_data["tax_rate"],
+                )
+
+            recalc_totals_for_invoice(invoice)
+            log_billing_history(
+                company=invoice.company,
+                kind=BillingDocumentHistory.Kind.INVOICE,
+                document_id=invoice.pk,
+                action=BillingDocumentHistory.Action.UPDATED,
+                user=request.user,
+                snapshot=snapshot_invoice(invoice),
+            )
+
+        messages.success(request, "Facture enregistrée.")
+        if _cabinet_admin(request):
+            return redirect(f'{reverse("invoicing:invoice_list")}?{urlencode({"company_name": invoice.company.nom})}')
+        return redirect("invoicing:invoice_list")
+
+
+@method_decorator(company_required, name="dispatch")
+class InvoiceCancelView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest, invoice_id: int):
+        invoice = get_object_or_404(Invoice, pk=invoice_id)
+        if not _can_access_company_document(request, invoice.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:invoice_list")
+        if not can_cancel_invoice(request.user, invoice):
+            messages.error(request, "Annulation non autorisée (statut ou droits).")
+            return redirect("invoicing:invoice_list")
+
+        with transaction.atomic():
+            invoice.status = Invoice.Status.CANCELLED
+            invoice.save(update_fields=["status"])
+            log_billing_history(
+                company=invoice.company,
+                kind=BillingDocumentHistory.Kind.INVOICE,
+                document_id=invoice.pk,
+                action=BillingDocumentHistory.Action.CANCELLED,
+                user=request.user,
+                snapshot=snapshot_invoice(invoice),
+            )
+
+        messages.success(request, "Facture annulée.")
+        if _cabinet_admin(request):
+            return redirect(f'{reverse("invoicing:invoice_list")}?{urlencode({"company_name": invoice.company.nom})}')
+        return redirect("invoicing:invoice_list")
+
+
+@method_decorator(company_required, name="dispatch")
+class InvoiceHistoryView(LoginRequiredMixin, View):
+    template_name = "invoicing/billing_history.html"
+
+    def get(self, request: HttpRequest, invoice_id: int):
+        invoice = get_object_or_404(Invoice, pk=invoice_id)
+        if not _can_access_company_document(request, invoice.company_id):
+            messages.error(request, "Accès refusé.")
+            return redirect("invoicing:invoice_list")
+
+        entries = BillingDocumentHistory.objects.filter(
+            company_id=invoice.company_id,
+            kind=BillingDocumentHistory.Kind.INVOICE,
+            document_id=invoice.pk,
+        )
+        return render(
+            request,
+            self.template_name,
+            {
+                "document_kind_label": "Facture",
+                "document_ref": invoice.number,
+                "entries": entries,
+                "company_name": request.GET.get("company_name") or (invoice.company.nom if _cabinet_admin(request) else ""),
+                "companies": _companies_for_request(request),
+                "back_url": reverse("invoicing:invoice_list") + _cabinet_company_query(request, invoice.company),
+            },
+        )

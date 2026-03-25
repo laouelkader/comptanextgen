@@ -3,15 +3,24 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Bilan & Compte de résultat (MVP)</h1>
-      <div class="flex gap-2">
-        <a class="border px-3 py-2 rounded text-sm" href="{% url 'accounting:statements_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&validated_only={{ validated_only }}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
-          Export Excel
-        </a>
-        <a class="border px-3 py-2 rounded text-sm" href="{% url 'accounting:statements_pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}&validated_only={{ validated_only }}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
-          Export PDF
-        </a>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="chart-bar" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Bilan & Compte de résultat (MVP)</span>
+      </h1>
+      <div class="flex gap-2 flex-wrap">
+        {% if user_can_manage_sensitive %}
+          <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm text-gray-800 hover:bg-gray-50" href="{% url 'accounting:statements_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&validated_only={{ validated_only }}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
+            {% include "core/partials/ui_icon.html" with icon="arrow-down-tray" css_class="w-4 h-4 text-gray-500" %}
+            Export Excel
+          </a>
+          <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm text-gray-800 hover:bg-gray-50" href="{% url 'accounting:statements_pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}&validated_only={{ validated_only }}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
+            {% include "core/partials/ui_icon.html" with icon="document-pdf" css_class="w-4 h-4 text-gray-500" %}
+            Export PDF
+          </a>
+        {% else %}
+          <span class="text-sm text-gray-500">Exports réservés au gérant et au comptable.</span>
+        {% endif %}
       </div>
     </div>
 
@@ -44,7 +53,8 @@
           </div>
         {% endif %}
         <div class="md:col-span-1">
-          <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700 w-full">
+          <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700 w-full">
+            {% include "core/partials/ui_icon.html" with icon="arrow-path" css_class="w-4 h-4 text-white" %}
             Mettre à jour
           </button>
         </div>
@@ -53,7 +63,10 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="bg-white border border-gray-200 rounded p-4">
-        <div class="font-semibold mb-2">Bilan</div>
+        <div class="font-semibold mb-2 flex items-center gap-2">
+          {% include "core/partials/ui_icon.html" with icon="building" css_class="w-5 h-5 text-indigo-600" %}
+          Bilan
+        </div>
         <div class="text-sm text-gray-600 mb-3">
           Période N : {{ start_date }} -> {{ end_date }} (et N-1 : {{ prev_start_date }} -> {{ prev_end_date }})
         </div>
@@ -80,7 +93,10 @@
       </div>
 
       <div class="bg-white border border-gray-200 rounded p-4">
-        <div class="font-semibold mb-2">Compte de résultat</div>
+        <div class="font-semibold mb-2 flex items-center gap-2">
+          {% include "core/partials/ui_icon.html" with icon="chart-pie" css_class="w-5 h-5 text-indigo-600" %}
+          Compte de résultat
+        </div>
         <div class="space-y-2">
           <div class="flex justify-between">
             <span>Charges (N)</span>

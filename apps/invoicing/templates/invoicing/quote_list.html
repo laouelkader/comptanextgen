@@ -3,9 +3,13 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Devis</h1>
-      <a class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" href="{% url 'invoicing:quote_add' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="quote" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Devis</span>
+      </h1>
+      <a class="inline-flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" href="{% url 'invoicing:quote_add' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+        {% include "core/partials/ui_icon.html" with icon="plus" css_class="w-4 h-4 text-white" %}
         Nouveau devis
       </a>
     </div>
@@ -21,6 +25,7 @@
             <option value="ACCEPTED" {% if status == 'ACCEPTED' %}selected{% endif %}>Accepté</option>
             <option value="REFUSED" {% if status == 'REFUSED' %}selected{% endif %}>Refusé</option>
             <option value="EXPIRED" {% if status == 'EXPIRED' %}selected{% endif %}>Expiré</option>
+            <option value="CANCELLED" {% if status == 'CANCELLED' %}selected{% endif %}>Annulé</option>
           </select>
         </div>
         {% if request.user.role == "CABINET_ADMIN" %}
@@ -34,7 +39,10 @@
             </select>
           </div>
         {% endif %}
-        <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Filtrer</button>
+        <button class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">
+          {% include "core/partials/ui_icon.html" with icon="funnel" css_class="w-4 h-4 text-white" %}
+          Filtrer
+        </button>
       </form>
     </div>
 
@@ -61,15 +69,41 @@
               <td class="py-2 px-4">{{ q.get_status_display }}</td>
               <td class="py-2 px-4">{{ q.total_ttc|floatformat:2 }}</td>
               <td class="py-2 px-4">
+                <div class="flex flex-col gap-1.5">
+                  {% if q.status != 'ACCEPTED' and q.status != 'CANCELLED' %}
+                    {% if user_can_manage_sensitive or user_is_collaborator and q.status == 'DRAFT' %}
+                      <a class="inline-flex items-center gap-1 text-indigo-700 text-sm hover:underline" href="{% url 'invoicing:quote_edit' q.id %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+                        Modifier
+                      </a>
+                    {% endif %}
+                  {% endif %}
+                  <a class="inline-flex items-center gap-1 text-gray-600 text-sm hover:underline" href="{% url 'invoicing:quote_history' q.id %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+                    Historique
+                  </a>
+                  {% if user_can_cancel_billing and q.status != 'CANCELLED' and q.status != 'ACCEPTED' %}
+                    <form method="post" action="{% url 'invoicing:quote_cancel' q.id %}" onsubmit="return confirm('Annuler ce devis ?');">
+                      {% csrf_token %}
+                      {% if request.user.role == "CABINET_ADMIN" and company_name %}
+                        <input type="hidden" name="company_name" value="{{ company_name }}" />
+                      {% endif %}
+                      <button class="text-sm text-red-600 hover:underline" type="submit">Annuler</button>
+                    </form>
+                  {% endif %}
+                  {% if user_can_manage_sensitive and q.status != 'CANCELLED' %}
                 <form method="post" action="{% url 'invoicing:quote_convert' q.id %}">
                   {% csrf_token %}
                   {% if request.user.role == "CABINET_ADMIN" and company_name %}
                     <input type="hidden" name="company_name" value="{{ company_name }}" />
                   {% endif %}
-                  <button class="border px-3 py-1 rounded text-sm hover:bg-gray-50" type="submit">
+                  <button class="inline-flex items-center gap-1 border px-3 py-1 rounded text-sm hover:bg-gray-50" type="submit">
+                    {% include "core/partials/ui_icon.html" with icon="arrow-right-circle" css_class="w-4 h-4 text-gray-500" %}
                     Convertir
                   </button>
                 </form>
+                  {% elif not user_can_manage_sensitive %}
+                  <span class="text-xs text-gray-400">Conversion : gérant / comptable</span>
+                  {% endif %}
+                </div>
               </td>
             </tr>
           {% empty %}
@@ -86,10 +120,10 @@
         <div>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
         <div class="flex gap-2">
           {% if page_obj.has_previous %}
-            <a class="border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Précédent</a>
+            <a class="inline-flex items-center gap-1 border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">{% include "core/partials/ui_icon.html" with icon="chevron-left" css_class="w-4 h-4" %}Précédent</a>
           {% endif %}
           {% if page_obj.has_next %}
-            <a class="border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant</a>
+            <a class="inline-flex items-center gap-1 border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant{% include "core/partials/ui_icon.html" with icon="chevron-right" css_class="w-4 h-4" %}</a>
           {% endif %}
         </div>
       </div>

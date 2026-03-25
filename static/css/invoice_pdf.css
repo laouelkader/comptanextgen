@@ -1,0 +1,38 @@
+/* Feuille dédiée au rendu PDF facture. */
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 10pt;
+  color: #111827;
+  margin: 0;
+  padding: 16mm 14mm;
+  line-height: 1.35;
+}
+.doc-header { border-bottom: 2px solid #1e3a5f; padding-bottom: 14px; margin-bottom: 18px; }
+.issuer { font-size: 11pt; font-weight: 700; color: #1e3a5f; margin-bottom: 4px; }
+.doc-kind { display: inline-block; margin-top: 8px; padding: 4px 10px; font-size: 9pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; background: #1e3a5f; border-radius: 2px; }
+.invoice-num { margin-top: 6px; font-size: 13pt; font-weight: 700; color: #111827; }
+.grid-two { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+.grid-two td { width: 50%; vertical-align: top; padding: 0 12px 0 0; }
+.grid-two td:last-child { padding-right: 0; padding-left: 12px; }
+.panel { border: 1px solid #d1d5db; background: #fafafa; padding: 10px 12px; font-size: 9pt; }
+.panel-title { font-weight: 700; color: #374151; margin-bottom: 6px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; }
+.meta-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 16px; }
+.meta-table th, .meta-table td { border: 1px solid #d1d5db; padding: 6px 10px; text-align: left; }
+.meta-table th { background: #f3f4f6; font-weight: 600; width: 28%; color: #4b5563; }
+h2 { margin: 0 0 8px 0; font-size: 10pt; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.06em; }
+table.invoice-lines { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 12px; }
+table.invoice-lines th, table.invoice-lines td { border: 1px solid #d1d5db; padding: 7px 8px; vertical-align: top; }
+table.invoice-lines thead th { background: #f3f4f6; font-weight: 600; text-align: center; color: #374151; }
+table.invoice-lines tbody td.desc { text-align: left; }
+table.invoice-lines tbody td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.invoice-lines tbody td.center { text-align: center; }
+.empty-cell { text-align: center; color: #9ca3af; }
+table.totals { margin-left: auto; width: 280px; border-collapse: collapse; font-size: 10pt; }
+table.totals th, table.totals td { border: 1px solid #d1d5db; padding: 8px 12px; }
+table.totals th { background: #f3f4f6; font-weight: 600; text-align: left; }
+table.totals td { text-align: right; font-variant-numeric: tabular-nums; }
+table.totals tr.grand-total th, table.totals tr.grand-total td { background: #eff6ff; font-weight: 700; font-size: 11pt; border-top: 2px solid #1e3a5f; }
+.notes { margin-top: 16px; padding: 10px 12px; border: 1px dashed #d1d5db; font-size: 9pt; color: #4b5563; }
+.notes strong { color: #374151; }
+.footnote { margin-top: 22px; padding-top: 10px; border-top: 1px solid #e5e7eb; font-size: 8pt; color: #9ca3af; }

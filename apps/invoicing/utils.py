@@ -10,50 +10,138 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from apps.core.models import Company
-from .models import Invoice, InvoiceLine, Quote
+from .models import BillingDocumentHistory, DocumentSequence, Invoice, InvoiceLine, Quote
 
 
-def _next_number(company: Company, prefix: str, year: int) -> str:
-    """
-    Génère un numéro du type {PREFIX}-{YYYY}-XXXX (par entreprise).
-    """
-
+def _bootstrap_next_seq(company: Company, kind: str, year: int) -> int:
+    """Prochain indice libre à partir des documents existants (sans verrou de séquence)."""
+    prefix = "DEV" if kind == DocumentSequence.Kind.QUOTE else "FAC"
     base = f"{prefix}-{year}-"
-    last = (
-        Quote.objects.filter(company=company, number__startswith=base)
-        .values_list("number", flat=True)
-        .order_by("-number")
-        .first()
-    )
-    if last is None:
-        last_index = 0
-    else:
+    Model = Quote if kind == DocumentSequence.Kind.QUOTE else Invoice
+    max_seq = 0
+    for num in Model.objects.filter(company=company, number__startswith=base).values_list("number", flat=True):
         try:
-            last_index = int(last.split("-")[-1])
+            idx = int(str(num).split("-")[-1])
+            max_seq = max(max_seq, idx)
         except (ValueError, IndexError):
-            last_index = 0
+            continue
+    return max_seq + 1
 
-    next_index = last_index + 1
-    return f"{prefix}-{year}-{next_index:04d}"
+
+def allocate_next_document_number(company: Company, kind: str) -> str:
+    """
+    Alloue atomiquement le prochain numéro {DEV|FAC}-{YYYY}-NNNN pour l'entreprise.
+    Utilise DocumentSequence + select_for_update pour éviter les doublons.
+    """
+    year = timezone.now().year
+    prefix = "DEV" if kind == DocumentSequence.Kind.QUOTE else "FAC"
+
+    with transaction.atomic():
+        seq = (
+            DocumentSequence.objects.select_for_update()
+            .filter(company=company, kind=kind, year=year)
+            .first()
+        )
+        if seq is None:
+            next_idx = _bootstrap_next_seq(company, kind, year)
+            seq = DocumentSequence.objects.create(
+                company=company,
+                kind=kind,
+                year=year,
+                next_seq=next_idx,
+            )
+        elif seq.next_seq == 0:
+            seq.next_seq = _bootstrap_next_seq(company, kind, year)
+            seq.save(update_fields=["next_seq"])
+
+        current = seq.next_seq
+        seq.next_seq = current + 1
+        seq.save(update_fields=["next_seq"])
+
+    return f"{prefix}-{year}-{current:04d}"
 
 
 def next_quote_number(company: Company) -> str:
-    year = timezone.now().year
-    prefix = "DEV"
-    base = f"{prefix}-{year}-"
-    # On s'appuie sur Quote uniquement
-    last_number = Quote.objects.filter(company=company, number__startswith=base).order_by("-number").values_list("number", flat=True).first()
-    last_index = int(last_number.split("-")[-1]) if last_number else 0
-    return f"{prefix}-{year}-{last_index + 1:04d}"
+    return allocate_next_document_number(company, DocumentSequence.Kind.QUOTE)
 
 
 def next_invoice_number(company: Company) -> str:
-    year = timezone.now().year
-    prefix = "FAC"
-    base = f"{prefix}-{year}-"
-    last_number = Invoice.objects.filter(company=company, number__startswith=base).order_by("-number").values_list("number", flat=True).first()
-    last_index = int(last_number.split("-")[-1]) if last_number else 0
-    return f"{prefix}-{year}-{last_index + 1:04d}"
+    return allocate_next_document_number(company, DocumentSequence.Kind.INVOICE)
+
+
+def snapshot_quote(quote: Quote) -> dict:
+    lines = []
+    for line in quote.lines.all().order_by("id"):
+        lines.append(
+            {
+                "description": line.description,
+                "quantity": str(line.quantity),
+                "unit_price": str(line.unit_price),
+                "tax_rate": str(line.tax_rate),
+                "amount_ht": str(line.amount_ht),
+                "amount_ttc": str(line.amount_ttc),
+            }
+        )
+    return {
+        "number": quote.number,
+        "date": quote.date.isoformat(),
+        "valid_until": quote.valid_until.isoformat(),
+        "client_name": quote.client_name,
+        "client_email": quote.client_email or "",
+        "status": quote.status,
+        "total_ht": str(quote.total_ht),
+        "total_ttc": str(quote.total_ttc),
+        "notes": quote.notes or "",
+        "lines": lines,
+    }
+
+
+def snapshot_invoice(invoice: Invoice) -> dict:
+    lines = []
+    for line in invoice.lines.all().order_by("id"):
+        lines.append(
+            {
+                "description": line.description,
+                "quantity": str(line.quantity),
+                "unit_price": str(line.unit_price),
+                "tax_rate": str(line.tax_rate),
+                "amount_ht": str(line.amount_ht),
+                "amount_ttc": str(line.amount_ttc),
+            }
+        )
+    return {
+        "number": invoice.number,
+        "date": invoice.date.isoformat(),
+        "due_date": invoice.due_date.isoformat(),
+        "client_name": invoice.client_name,
+        "client_email": invoice.client_email or "",
+        "status": invoice.status,
+        "total_ht": str(invoice.total_ht),
+        "total_ttc": str(invoice.total_ttc),
+        "notes": invoice.notes or "",
+        "lines": lines,
+    }
+
+
+def log_billing_history(
+    *,
+    company: Company,
+    kind: str,
+    document_id: int,
+    action: str,
+    user,
+    snapshot: dict | None = None,
+    note: str = "",
+) -> BillingDocumentHistory:
+    return BillingDocumentHistory.objects.create(
+        company=company,
+        kind=kind,
+        document_id=document_id,
+        action=action,
+        user=user if user and getattr(user, "is_authenticated", False) else None,
+        snapshot=snapshot or {},
+        note=note[:500] if note else "",
+    )
 
 
 def recalc_totals_for_quote(quote: Quote) -> None:

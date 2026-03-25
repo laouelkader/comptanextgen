@@ -1,0 +1,25 @@
+/* Feuille dédiée au rendu PDF des états financiers. */
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 11pt;
+  color: #111827;
+  margin: 0;
+  padding: 16mm 14mm;
+  line-height: 1.35;
+}
+.doc-header { border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 18px; }
+.doc-header h1 { margin: 0 0 6px 0; font-size: 16pt; font-weight: 700; color: #1e3a5f; letter-spacing: 0.02em; }
+.entity { font-size: 12pt; font-weight: 600; color: #374151; }
+.meta { margin-top: 8px; font-size: 9pt; color: #6b7280; }
+.meta-line { margin: 2px 0; }
+h2 { margin: 20px 0 8px 0; font-size: 11pt; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.06em; }
+table.fs-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 10pt; }
+table.fs-table th, table.fs-table td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: middle; }
+table.fs-table thead th { background: #f3f4f6; font-weight: 600; text-align: center; color: #374151; }
+table.fs-table tbody th { background: #fafafa; font-weight: 600; text-align: left; width: 42%; }
+table.fs-table td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.fs-table tbody tr.result td { font-weight: 700; border-top: 2px solid #9ca3af; background: #eff6ff; }
+.positive { color: #047857; }
+.negative { color: #b91c1c; }
+.footnote { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 8pt; color: #9ca3af; }

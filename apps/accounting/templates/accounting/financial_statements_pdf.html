@@ -3,77 +3,84 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>États financiers</title>
-    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}" />
-    <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
-      h1 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
-      .section { margin-top: 12px; }
-      .row { display: flex; justify-content: space-between; }
-    </style>
+    <title>États financiers — {{ start_date }} / {{ end_date }}</title>
+    <link rel="stylesheet" href="{% static 'css/financial_statements_pdf.css' %}" />
   </head>
-  <body class="p-6">
-    <h1>États financiers (MVP)</h1>
-    <div class="text-sm text-gray-700 mb-4">
-      Période N : {{ start_date }} -> {{ end_date }}<br />
-      Période N-1 : {{ prev_start_date }} -> {{ prev_end_date }}
-    </div>
-
-    <div class="section">
-      <div class="font-semibold">Bilan</div>
-      <div class="mt-2">
-        <div class="row">
-          <span>Actif (N)</span>
-          <span class="font-semibold">{{ bilan.actif|floatformat:2 }}</span>
+  <body>
+    {# Entête global du document comptable #}
+    <header class="doc-header">
+      <h1>États financiers synthétiques</h1>
+      {% if report_entity_label %}
+        <div class="entity">{{ report_entity_label }}</div>
+      {% endif %}
+      <div class="meta">
+        <div class="meta-line">
+          <strong>Exercice</strong> — du {{ start_date_fr }} au {{ end_date_fr }}
+          &nbsp;·&nbsp; comparatif N-1 : du {{ prev_start_date_fr }} au {{ prev_end_date_fr }}
         </div>
-        <div class="row">
-          <span>Passif (N)</span>
-          <span class="font-semibold">{{ bilan.passif|floatformat:2 }}</span>
-        </div>
-        <div class="row mt-2">
-          <span>Actif (N-1)</span>
-          <span class="font-semibold">{{ bilan.actif_prev|floatformat:2 }}</span>
-        </div>
-        <div class="row">
-          <span>Passif (N-1)</span>
-          <span class="font-semibold">{{ bilan.passif_prev|floatformat:2 }}</span>
+        <div class="meta-line">
+          Base : {% if validated_only %}écritures validées uniquement{% else %}toutes les écritures{% endif %}
         </div>
       </div>
-    </div>
+    </header>
 
-    <div class="section">
-      <div class="font-semibold">Compte de résultat</div>
-      <div class="mt-2">
-        <div class="row">
-          <span>Charges (N)</span>
-          <span class="font-semibold">{{ compte_resultat.charges|floatformat:2 }}</span>
-        </div>
-        <div class="row">
-          <span>Produits (N)</span>
-          <span class="font-semibold">{{ compte_resultat.produits|floatformat:2 }}</span>
-        </div>
-        <div class="row mt-2 border-t pt-2">
-          <span>Résultat (N)</span>
-          {% if compte_resultat.resultat >= 0 %}
-            <span class="font-semibold text-green-700">{{ compte_resultat.resultat|floatformat:2 }}</span>
-          {% else %}
-            <span class="font-semibold text-red-700">{{ compte_resultat.resultat|floatformat:2 }}</span>
-          {% endif %}
-        </div>
-        <div class="row mt-2 border-t pt-2">
-          <span>Charges (N-1)</span>
-          <span class="font-semibold">{{ compte_resultat.charges_prev|floatformat:2 }}</span>
-        </div>
-        <div class="row">
-          <span>Produits (N-1)</span>
-          <span class="font-semibold">{{ compte_resultat.produits_prev|floatformat:2 }}</span>
-        </div>
-        <div class="row mt-2">
-          <span>Résultat (N-1)</span>
-          <span class="font-semibold">{{ compte_resultat.resultat_prev|floatformat:2 }}</span>
-        </div>
-      </div>
-    </div>
+    {# Tableau 1 : Bilan synthétique N vs N-1 #}
+    <h2>Bilan simplifié</h2>
+    <table class="fs-table" role="table" aria-label="Bilan">
+      <thead>
+        <tr>
+          <th scope="col">Poste</th>
+          <th scope="col">Montant — période N</th>
+          <th scope="col">Montant — période N-1</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Total actif</th>
+          <td class="amount">{{ bilan.actif|floatformat:2 }}&nbsp;€</td>
+          <td class="amount">{{ bilan.actif_prev|floatformat:2 }}&nbsp;€</td>
+        </tr>
+        <tr>
+          <th scope="row">Total passif</th>
+          <td class="amount">{{ bilan.passif|floatformat:2 }}&nbsp;€</td>
+          <td class="amount">{{ bilan.passif_prev|floatformat:2 }}&nbsp;€</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {# Tableau 2 : Compte de résultat N vs N-1 #}
+    <h2>Compte de résultat</h2>
+    <table class="fs-table" role="table" aria-label="Compte de résultat">
+      <thead>
+        <tr>
+          <th scope="col">Poste</th>
+          <th scope="col">Montant — période N</th>
+          <th scope="col">Montant — période N-1</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Charges</th>
+          <td class="amount">{{ compte_resultat.charges|floatformat:2 }}&nbsp;€</td>
+          <td class="amount">{{ compte_resultat.charges_prev|floatformat:2 }}&nbsp;€</td>
+        </tr>
+        <tr>
+          <th scope="row">Produits</th>
+          <td class="amount">{{ compte_resultat.produits|floatformat:2 }}&nbsp;€</td>
+          <td class="amount">{{ compte_resultat.produits_prev|floatformat:2 }}&nbsp;€</td>
+        </tr>
+        <tr class="result">
+          <th scope="row">Résultat net (produits − charges)</th>
+          <td class="amount {% if compte_resultat.resultat >= 0 %}positive{% else %}negative{% endif %}">
+            {{ compte_resultat.resultat|floatformat:2 }}&nbsp;€
+          </td>
+          <td class="amount">{{ compte_resultat.resultat_prev|floatformat:2 }}&nbsp;€</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="footnote">
+      Document généré à partir des écritures comptables saisies dans l’application. Les montants sont agrégés par nature de compte (actif, passif, charges, produits).
+    </p>
   </body>
 </html>
-

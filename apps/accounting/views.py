@@ -7,8 +7,11 @@ from io import BytesIO
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
+from urllib.parse import urlencode
+
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views import View
@@ -18,6 +21,7 @@ from openpyxl import Workbook
 
 from apps.core.decorators import company_required
 from apps.core.models import Company
+from apps.core.permissions import can_export_financial_reports, can_validate_accounting_entries
 
 from .forms import AccountingEntryForm, EntryLineFormSet
 from .models import AccountingEntry, ChartOfAccount, EntryLine
@@ -76,6 +80,7 @@ def build_financial_statements_context(request: HttpRequest) -> dict:
     base_lines = EntryLine.objects.select_related("entry", "account").filter(entry__date__range=(start, end))
     prev_lines = EntryLine.objects.select_related("entry", "account").filter(entry__date__range=(prev_start, prev_end))
 
+    scope = None
     if cabinet:
         scope = _resolve_company_cabinet_scope(request)
         if scope:
@@ -106,12 +111,22 @@ def build_financial_statements_context(request: HttpRequest) -> dict:
     resultat_n = totals_n["PRODUIT"] - totals_n["CHARGE"]
     resultat_n_1 = totals_n_1["PRODUIT"] - totals_n_1["CHARGE"]
 
+    if cabinet:
+        report_entity_label = scope.nom if scope else "Consolidé — toutes les sociétés"
+    else:
+        report_entity_label = company.nom if company else ""
+
     return {
         "start_date": start.isoformat(),
         "end_date": end.isoformat(),
         "prev_start_date": prev_start.isoformat(),
         "prev_end_date": prev_end.isoformat(),
+        "start_date_fr": start.strftime("%d/%m/%Y"),
+        "end_date_fr": end.strftime("%d/%m/%Y"),
+        "prev_start_date_fr": prev_start.strftime("%d/%m/%Y"),
+        "prev_end_date_fr": prev_end.strftime("%d/%m/%Y"),
         "validated_only": validated_only,
+        "report_entity_label": report_entity_label,
         "company_name": request.GET.get("company_name"),
         "companies": Company.objects.filter(is_active=True).order_by("nom") if cabinet else None,
         "bilan": {
@@ -177,6 +192,44 @@ class EntryListView(LoginRequiredMixin, View):
             "companies": Company.objects.filter(is_active=True).order_by("nom") if cabinet else None,
         }
         return render(request, self.template_name, ctx)
+
+
+@method_decorator(company_required, name="dispatch")
+class EntryValidateView(LoginRequiredMixin, View):
+    """POST uniquement : valider une écriture (gérant, comptable ou admin cabinet)."""
+
+    def post(self, request: HttpRequest, pk: int):
+        if not can_validate_accounting_entries(request.user):
+            messages.error(request, "Seuls le gérant et le comptable peuvent valider une écriture.")
+            return redirect("accounting:entry_list")
+
+        entry = get_object_or_404(AccountingEntry.objects.select_related("company"), pk=pk)
+        cabinet = _is_cabinet_admin(request)
+        company = getattr(request, "company", None)
+
+        if cabinet:
+            scope = _resolve_company_cabinet_scope(request)
+            if scope and entry.company_id != scope.pk:
+                messages.error(request, "Écriture hors périmètre entreprise sélectionnée.")
+                return redirect("accounting:entry_list")
+        else:
+            if company is None or entry.company_id != company.pk:
+                messages.error(request, "Accès refusé.")
+                return redirect("accounting:entry_list")
+
+        if entry.validated:
+            messages.info(request, "Cette écriture est déjà validée.")
+            return redirect("accounting:entry_list")
+
+        entry.validated = True
+        entry.validation_by = request.user
+        entry.validation_date = timezone.now()
+        entry.save(update_fields=["validated", "validation_by", "validation_date"])
+        messages.success(request, "Écriture validée.")
+        cn = (request.POST.get("company_name") or "").strip()
+        if cabinet and cn:
+            return redirect(f"{reverse('accounting:entry_list')}?{urlencode({'company_name': cn})}")
+        return redirect("accounting:entry_list")
 
 
 @method_decorator(company_required, name="dispatch")
@@ -294,6 +347,9 @@ class FinancialStatementsView(LoginRequiredMixin, View):
 @method_decorator(company_required, name="dispatch")
 class FinancialStatementsExcelView(LoginRequiredMixin, View):
     def get(self, request: HttpRequest):
+        if not can_export_financial_reports(request.user):
+            messages.error(request, "Export réservé au gérant et au comptable.")
+            return redirect("accounting:statements")
         ctx = build_financial_statements_context(request)
 
         wb = Workbook()
@@ -334,6 +390,9 @@ class FinancialStatementsExcelView(LoginRequiredMixin, View):
 @method_decorator(company_required, name="dispatch")
 class FinancialStatementsPDFView(LoginRequiredMixin, View):
     def get(self, request: HttpRequest):
+        if not can_export_financial_reports(request.user):
+            messages.error(request, "Export réservé au gérant et au comptable.")
+            return redirect("accounting:statements")
         ctx = build_financial_statements_context(request)
         html = render_to_string("accounting/financial_statements_pdf.html", ctx, request=request)
 
@@ -342,8 +401,7 @@ class FinancialStatementsPDFView(LoginRequiredMixin, View):
 
             pdf_file = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
         except Exception:
-            messages.error(request, "Export PDF indisponible (WeasyPrint non configuré sur cet environnement).")
-            return redirect("accounting:statements")
+            return render(request, "accounting/financial_statements_pdf.html", ctx)
 
         filename = f'etats_financiers_{ctx["start_date"]}_{ctx["end_date"]}.pdf'
         response = HttpResponse(pdf_file, content_type="application/pdf")

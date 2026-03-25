@@ -3,82 +3,110 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>{{ invoice.number }}</title>
-    <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 24px; }
-      h1 { font-size: 20px; margin: 0 0 10px 0; }
-      .meta { font-size: 12px; color: #444; margin-bottom: 14px; }
-      table { width: 100%; border-collapse: collapse; font-size: 12px; }
-      th, td { border: 1px solid #ddd; padding: 8px; }
-      th { background: #f7f7f7; text-align: left; }
-      .totals { margin-top: 14px; display: flex; justify-content: flex-end; }
-      .totals > div { width: 280px; }
-      .row { display: flex; justify-content: space-between; padding: 4px 0; }
-      .row strong { font-size: 14px; }
-    </style>
+    <title>Facture {{ invoice.number }}</title>
+    <link rel="stylesheet" href="{% static 'css/invoice_pdf.css' %}" />
   </head>
   <body>
-    {% if pdf_html_fallback %}
-      <div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px;margin-bottom:16px;font-size:14px;border-radius:6px;">
-        <strong>Mode secours (sans WeasyPrint)</strong> — Utilisez <strong>Ctrl+P</strong> (ou Fichier → Imprimer),
-        puis « Enregistrer au format PDF » ou « Microsoft Print to PDF ».
-      </div>
-    {% endif %}
-    <h1>Facture {{ invoice.number }}</h1>
-    <div class="meta">
-      Date : {{ invoice.date }}<br />
-      Échéance : {{ invoice.due_date }}<br />
-      Statut : {{ invoice.get_status_display }}<br />
-    </div>
+    {# En-tête entreprise et identification de la facture #}
+    <header class="doc-header">
+      <div class="issuer">{{ invoice.company.nom }}</div>
+      <div class="doc-kind">Facture</div>
+      <div class="invoice-num">N° {{ invoice.number }}</div>
+    </header>
 
-    <div class="meta">
-      <strong>Client :</strong> {{ invoice.client_name }}<br />
-      {% if invoice.client_email %}Email : {{ invoice.client_email }}<br />{% endif %}
-      {% if invoice.client_siret %}SIRET : {{ invoice.client_siret }}<br />{% endif %}
-      {% if invoice.client_address %}Adresse : {{ invoice.client_address }}<br />{% endif %}
-    </div>
+    {# Bloc gauche: émetteur / bloc droit: client #}
+    <table class="grid-two" role="presentation">
+      <tr>
+        <td>
+          <div class="panel">
+            <div class="panel-title">Émetteur</div>
+            <strong>{{ invoice.company.nom }}</strong>
+          </div>
+        </td>
+        <td>
+          <div class="panel">
+            <div class="panel-title">Adressé à (client)</div>
+            <strong>{{ invoice.client_name }}</strong>
+            {% if invoice.client_email %}<br />{{ invoice.client_email }}{% endif %}
+            {% if invoice.client_siret %}<br />SIRET : {{ invoice.client_siret }}{% endif %}
+            {% if invoice.client_address %}<br />{{ invoice.client_address|linebreaksbr }}{% endif %}
+          </div>
+        </td>
+      </tr>
+    </table>
 
-    <table>
+    {# Métadonnées administratives utiles pour la lecture et l’archivage #}
+    <table class="meta-table" aria-label="Informations facture">
+      <tbody>
+        <tr>
+          <th scope="row">Date d’émission</th>
+          <td>{{ invoice_date_fr }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Date d’échéance</th>
+          <td>{{ due_date_fr }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Statut</th>
+          <td>{{ invoice.get_status_display }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {# Tableau principal des lignes de facturation #}
+    <h2>Détail des prestations / lignes</h2>
+    <table class="invoice-lines" role="table" aria-label="Lignes de facture">
       <thead>
         <tr>
-          <th>Description</th>
-          <th>Qté</th>
-          <th>PU</th>
-          <th>TVA</th>
-          <th>HT</th>
-          <th>TTC</th>
+          <th scope="col">Désignation</th>
+          <th scope="col">Qté</th>
+          <th scope="col">P.U. HT</th>
+          <th scope="col">TVA</th>
+          <th scope="col">Montant HT</th>
+          <th scope="col">Montant TTC</th>
         </tr>
       </thead>
       <tbody>
         {% for l in lines %}
           <tr>
-            <td>{{ l.description }}</td>
-            <td>{{ l.quantity }}</td>
-            <td>{{ l.unit_price }}</td>
-            <td>{{ l.tax_rate }}%</td>
-            <td>{{ l.amount_ht|floatformat:2 }}</td>
-            <td>{{ l.amount_ttc|floatformat:2 }}</td>
+            <td class="desc">{{ l.description }}</td>
+            <td class="num">{{ l.quantity|floatformat:2 }}</td>
+            <td class="num">{{ l.unit_price|floatformat:2 }}&nbsp;€</td>
+            <td class="center">{{ l.tax_rate|floatformat:1 }}&nbsp;%</td>
+            <td class="num">{{ l.amount_ht|floatformat:2 }}&nbsp;€</td>
+            <td class="num">{{ l.amount_ttc|floatformat:2 }}&nbsp;€</td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6">Aucune ligne</td>
+            <td colspan="6" class="desc empty-cell">Aucune ligne</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <div class="totals">
-      <div>
-        <div class="row"><span>Total HT</span><span>{{ invoice.total_ht|floatformat:2 }}</span></div>
-        <div class="row"><span>Total TTC</span><span><strong>{{ invoice.total_ttc|floatformat:2 }}</strong></span></div>
-        {% if invoice.notes %}
-          <div style="margin-top: 12px; font-size: 12px; color: #444;">
-            <strong>Notes</strong><br />
-            {{ invoice.notes }}
-          </div>
-        {% endif %}
+    {# Totaux calculés à partir des lignes #}
+    <table class="totals" role="table" aria-label="Totaux">
+      <tbody>
+        <tr>
+          <th scope="row">Total HT</th>
+          <td>{{ invoice.total_ht|floatformat:2 }}&nbsp;€</td>
+        </tr>
+        <tr class="grand-total">
+          <th scope="row">Total TTC</th>
+          <td>{{ invoice.total_ttc|floatformat:2 }}&nbsp;€</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {% if invoice.notes %}
+      <div class="notes">
+        <strong>Notes / conditions</strong><br />
+        {{ invoice.notes|linebreaksbr }}
       </div>
-    </div>
+    {% endif %}
+
+    <p class="footnote">
+      Document émis à partir du logiciel ComptaNextGen. En cas de retard de paiement, des pénalités peuvent s’appliquer conformément aux conditions convenues.
+    </p>
   </body>
 </html>
-

@@ -3,11 +3,20 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Tableau de bord Trésorerie</h1>
-      <div class="flex gap-2">
-        <a class="border px-3 py-2 rounded text-sm" href="{% url 'treasury:reconciliation' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Rapprochement</a>
-        <a class="border px-3 py-2 rounded text-sm" href="{% url 'treasury:forecast' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Prévisionnel</a>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="wallet" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Tableau de bord Trésorerie</span>
+      </h1>
+      <div class="flex gap-2 flex-wrap">
+        <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm text-gray-800 hover:bg-gray-50" href="{% url 'treasury:reconciliation' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+          {% include "core/partials/ui_icon.html" with icon="arrows-path" css_class="w-4 h-4 text-gray-500" %}
+          Rapprochement
+        </a>
+        <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm text-gray-800 hover:bg-gray-50" href="{% url 'treasury:forecast' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+          {% include "core/partials/ui_icon.html" with icon="calendar" css_class="w-4 h-4 text-gray-500" %}
+          Prévisionnel
+        </a>
       </div>
     </div>
 
@@ -23,24 +32,36 @@
               {% endfor %}
             </select>
           </div>
-          <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Afficher</button>
+          <button class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">
+            {% include "core/partials/ui_icon.html" with icon="eye" css_class="w-4 h-4 text-white" %}
+            Afficher
+          </button>
         </form>
       </div>
     {% endif %}
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="bg-white border border-gray-200 rounded p-4">
-        <div class="text-xs text-gray-500">Solde (somme)</div>
+        <div class="text-xs text-gray-500 flex items-center gap-1.5">
+          {% include "core/partials/ui_icon.html" with icon="currency-euro" css_class="w-4 h-4 text-gray-400" %}
+          Solde (somme)
+        </div>
         <div class="text-xl font-semibold">{{ solde|floatformat:2 }}</div>
       </div>
       <div class="bg-white border border-gray-200 rounded p-4">
-        <div class="text-xs text-gray-500">Horizon</div>
+        <div class="text-xs text-gray-500 flex items-center gap-1.5">
+          {% include "core/partials/ui_icon.html" with icon="calendar" css_class="w-4 h-4 text-gray-400" %}
+          Horizon
+        </div>
         <div class="text-xl font-semibold">{{ horizon_days }} jours</div>
       </div>
     </div>
 
     <div class="bg-white border border-gray-200 rounded p-4">
-      <div class="font-semibold mb-3">Comptes bancaires</div>
+      <div class="font-semibold mb-3 flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="building" css_class="w-5 h-5 text-indigo-600" %}
+        Comptes bancaires
+      </div>
       <div class="space-y-2">
         {% for a in accounts %}
           <div class="flex items-center justify-between border-b pb-2">
@@ -57,7 +78,10 @@
     </div>
 
     <div class="bg-white border border-gray-200 rounded p-4">
-      <div class="font-semibold mb-3">Encaissements/décaissements à venir (prévisions)</div>
+      <div class="font-semibold mb-3 flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="arrow-path" css_class="w-5 h-5 text-indigo-600" %}
+        Encaissements/décaissements à venir (prévisions)
+      </div>
       {% if forecasts %}
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">

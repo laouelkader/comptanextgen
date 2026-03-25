@@ -3,11 +3,17 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Analytics</h1>
-      <a class="border px-3 py-2 rounded text-sm hover:bg-gray-50" href="{% url 'reporting:export_excel' %}">
-        Export Excel global
-      </a>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="chart-pie" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Analytics</span>
+      </h1>
+      {% if user_can_manage_sensitive %}
+        <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm hover:bg-gray-50 text-gray-800" href="{% url 'reporting:export_excel' %}">
+          {% include "core/partials/ui_icon.html" with icon="arrow-down-tray" css_class="w-4 h-4 text-gray-500" %}
+          Export Excel global
+        </a>
+      {% endif %}
     </div>
     {% if request.user.role == "CABINET_ADMIN" and companies %}
       <div class="bg-white border border-gray-200 rounded p-4">
@@ -21,7 +27,10 @@
               {% endfor %}
             </select>
           </div>
-          <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Afficher</button>
+          <button class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">
+            {% include "core/partials/ui_icon.html" with icon="eye" css_class="w-4 h-4 text-white" %}
+            Afficher
+          </button>
         </form>
       </div>
     {% endif %}
@@ -29,17 +38,26 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="bg-white border border-gray-200 rounded p-4">
-        <div class="text-xs text-gray-500">Solde trésorerie</div>
+        <div class="text-xs text-gray-500 flex items-center gap-1.5">
+          {% include "core/partials/ui_icon.html" with icon="wallet" css_class="w-4 h-4 text-gray-400" %}
+          Solde trésorerie
+        </div>
         <div class="text-xl font-semibold">{{ solde|floatformat:2 }}</div>
       </div>
       <div class="bg-white border border-gray-200 rounded p-4">
-        <div class="text-xs text-gray-500">Délai moyen (impayés)</div>
+        <div class="text-xs text-gray-500 flex items-center gap-1.5">
+          {% include "core/partials/ui_icon.html" with icon="invoice" css_class="w-4 h-4 text-gray-400" %}
+          Délai moyen (impayés)
+        </div>
         <div class="text-xl font-semibold">{{ avg_delay|floatformat:0 }} jours</div>
       </div>
     </div>
 
     <div class="bg-white border border-gray-200 rounded p-4">
-      <div class="font-semibold mb-2">CA mensuel (HT)</div>
+      <div class="font-semibold mb-2 flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="chart-bar" css_class="w-5 h-5 text-indigo-600" %}
+        CA mensuel (HT)
+      </div>
       <canvas id="caChart" height="120"></canvas>
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script>
@@ -64,7 +82,10 @@
     </div>
 
     <div class="bg-white border border-gray-200 rounded p-4">
-      <div class="font-semibold mb-2">Top clients (TTC, 30j)</div>
+      <div class="font-semibold mb-2 flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="users" css_class="w-5 h-5 text-indigo-600" %}
+        Top clients (TTC, 30j)
+      </div>
       <canvas id="topClientsChart" height="120"></canvas>
       <script>
         const clientNames = {{ top_client_names|safe }};

@@ -3,9 +3,15 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Rapprochement bancaire (MVP)</h1>
-      <a class="border px-3 py-2 rounded text-sm" href="{% url 'treasury:treasury_dashboard' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Retour dashboard</a>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="arrows-path" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Rapprochement bancaire</span>
+      </h1>
+      <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm text-gray-800 hover:bg-gray-50" href="{% url 'treasury:treasury_dashboard' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+        {% include "core/partials/ui_icon.html" with icon="arrow-left" css_class="w-4 h-4 text-gray-500" %}
+        Retour dashboard
+      </a>
     </div>
 
     {% if request.user.role == "CABINET_ADMIN" %}
@@ -20,17 +26,27 @@
               {% endfor %}
             </select>
           </div>
-          <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Afficher</button>
+          <button class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">
+            {% include "core/partials/ui_icon.html" with icon="eye" css_class="w-4 h-4 text-white" %}
+            Afficher
+          </button>
         </form>
       </div>
     {% endif %}
 
     <div class="bg-white border border-gray-200 rounded p-4">
-      <div class="font-semibold mb-3">Import relevé bancaire (CSV/XLSX)</div>
+      <div class="font-semibold mb-3 flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="arrow-up-tray" css_class="w-5 h-5 text-indigo-600" %}
+        Import relevé bancaire (CSV/XLSX)
+      </div>
+      {% if user_can_manage_sensitive %}
       <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end mb-6">
         {% csrf_token %}
         {% if request.user.role == "CABINET_ADMIN" and company_id %}
           <input type="hidden" name="company_id" value="{{ company_id }}" />
+        {% endif %}
+        {% if request.user.role == "CABINET_ADMIN" and company_name %}
+          <input type="hidden" name="company_name" value="{{ company_name }}" />
         {% endif %}
         <div>
           <label class="text-sm text-gray-700">Compte bancaire</label>
@@ -46,13 +62,17 @@
           <input type="file" name="file" class="mt-1 w-full border rounded px-3 py-2" />
         </div>
         <div>
-          <button class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" type="submit">
+          <button class="inline-flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" type="submit">
+            {% include "core/partials/ui_icon.html" with icon="arrow-up-tray" css_class="w-4 h-4 text-white" %}
             Importer
           </button>
         </div>
       </form>
+      {% else %}
+        <p class="text-sm text-gray-600 mb-6">L’import de relevé est réservé au <strong>gérant</strong> et au <strong>comptable</strong>. Vous pouvez consulter la liste ci-dessous.</p>
+      {% endif %}
 
-      <div class="text-sm text-gray-600 mb-3">Liste des transactions non rapprochées</div>
+      <div class="text-sm text-gray-600 mb-3">Transactions non rapprochées — suggestions basées sur le montant (écritures sur ±21 jours, lignes déjà utilisées exclues).</div>
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
           <thead class="text-left text-gray-500">
@@ -61,33 +81,54 @@
               <th class="py-2 px-4">Description</th>
               <th class="py-2 px-4">Type</th>
               <th class="py-2 px-4">Montant</th>
+              <th class="py-2 px-4 min-w-[14rem]">Ligne d’écriture</th>
               <th class="py-2 px-4">Action</th>
             </tr>
           </thead>
           <tbody class="text-gray-800">
-            {% for t in page_obj %}
+            {% for t, suggestions in rows_with_suggestions %}
               <tr class="border-t border-gray-100">
                 <td class="py-2 px-4 whitespace-nowrap">{{ t.date }}</td>
                 <td class="py-2 px-4">{{ t.description }}</td>
                 <td class="py-2 px-4">{{ t.transaction_type }}</td>
                 <td class="py-2 px-4 font-semibold">{{ t.amount|floatformat:2 }}</td>
-                <td class="py-2 px-4">
-                  <form method="post">
+                <td class="py-2 px-4 align-top">
+                  {% if user_can_manage_sensitive %}
+                  <form method="post" id="recon-form-{{ t.id }}" class="space-y-2">
                     {% csrf_token %}
                     {% if request.user.role == "CABINET_ADMIN" and company_name %}
                       <input type="hidden" name="company_name" value="{{ company_name }}" />
                     {% endif %}
                     <input type="hidden" name="bank_transaction_id" value="{{ t.id }}" />
-                    <input type="hidden" name="reconciled_entry_id" value="" />
-                    <button class="border px-3 py-1 rounded text-sm hover:bg-gray-50" type="submit">
-                      Marquer rapprochée
-                    </button>
+                    <label class="block text-xs text-gray-500">Ligne d’écriture (suggestions)</label>
+                    <select name="reconciled_entry_id" class="mt-1 w-full border rounded px-2 py-1 text-xs max-w-md">
+                      <option value="">— Aucune (rapprochement sans ligne) —</option>
+                      {% for s in suggestions %}
+                        <option value="{{ s.id }}">{{ s.entry_date }} · {{ s.account }} · net {{ s.net }} €</option>
+                      {% endfor %}
+                    </select>
+                    {% if suggestions %}
+                      <p class="text-xs text-gray-500">{{ suggestions|length }} suggestion(s)</p>
+                    {% endif %}
                   </form>
+                  {% else %}
+                    <span class="text-xs text-gray-400">—</span>
+                  {% endif %}
+                </td>
+                <td class="py-2 px-4 align-top">
+                  {% if user_can_manage_sensitive %}
+                  <button class="inline-flex items-center gap-1 border px-3 py-1 rounded text-sm hover:bg-gray-50" type="submit" form="recon-form-{{ t.id }}">
+                    {% include "core/partials/ui_icon.html" with icon="arrow-path" css_class="w-4 h-4 text-green-600" %}
+                    Rapprocher
+                  </button>
+                  {% else %}
+                    <span class="text-xs text-gray-400">—</span>
+                  {% endif %}
                 </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="5" class="py-6 px-4 text-gray-500">Aucune transaction à rapprocher.</td>
+                <td colspan="6" class="py-6 px-4 text-gray-500">Aucune transaction à rapprocher.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -99,10 +140,10 @@
           <div>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
           <div class="flex gap-2">
             {% if page_obj.has_previous %}
-              <a class="border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if bank_account_id %}&bank_account_id={{ bank_account_id }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Précédent</a>
+              <a class="inline-flex items-center gap-1 border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if bank_account_id %}&bank_account_id={{ bank_account_id }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">{% include "core/partials/ui_icon.html" with icon="chevron-left" css_class="w-4 h-4" %}Précédent</a>
             {% endif %}
             {% if page_obj.has_next %}
-              <a class="border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if bank_account_id %}&bank_account_id={{ bank_account_id }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant</a>
+              <a class="inline-flex items-center gap-1 border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if bank_account_id %}&bank_account_id={{ bank_account_id }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant{% include "core/partials/ui_icon.html" with icon="chevron-right" css_class="w-4 h-4" %}</a>
             {% endif %}
           </div>
         </div>

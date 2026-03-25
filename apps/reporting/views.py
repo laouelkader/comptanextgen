@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.views.generic import TemplateView, View
 
 from apps.core.decorators import company_required
+from apps.core.permissions import can_edit_alert_settings, can_export_reporting_global_excel
 
 
 from django.db.models import Sum
@@ -153,6 +154,10 @@ class AlertsView(LoginRequiredMixin, TemplateView):
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
+        if not can_edit_alert_settings(request.user):
+            messages.error(request, "La configuration des alertes est réservée au gérant et au comptable.")
+            return redirect("reporting:alerts")
+
         cabinet = getattr(request.user, "role", None) == "CABINET_ADMIN"
         company = getattr(request, "company", None)
         company_name = request.POST.get("company_name")
@@ -251,6 +256,10 @@ class ReportingExcelExportView(LoginRequiredMixin, View):
     """
 
     def get(self, request):
+        if not can_export_reporting_global_excel(request.user):
+            messages.error(request, "Export global réservé au gérant et au comptable.")
+            return redirect("reporting:analytics")
+
         from apps.accounting.models import AccountingEntry
         from apps.treasury.models import BankTransaction
 

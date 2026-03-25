@@ -3,9 +3,15 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Prévisionnel de trésorerie (MVP)</h1>
-      <a class="border px-3 py-2 rounded text-sm" href="{% url 'treasury:treasury_dashboard' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Retour dashboard</a>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="calendar" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Prévisionnel de trésorerie (MVP)</span>
+      </h1>
+      <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm text-gray-800 hover:bg-gray-50" href="{% url 'treasury:treasury_dashboard' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+        {% include "core/partials/ui_icon.html" with icon="arrow-left" css_class="w-4 h-4 text-gray-500" %}
+        Retour dashboard
+      </a>
     </div>
 
     {% if request.user.role == "CABINET_ADMIN" %}
@@ -28,7 +34,10 @@
               <option value="365" {% if horizon_days == 365 %}selected{% endif %}>365</option>
             </select>
           </div>
-          <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700">Afficher</button>
+          <button type="submit" class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700">
+            {% include "core/partials/ui_icon.html" with icon="eye" css_class="w-4 h-4 text-white" %}
+            Afficher
+          </button>
         </form>
       </div>
     {% endif %}
@@ -46,12 +55,18 @@
             <option value="365" {% if horizon_days == 365 %}selected{% endif %}>365</option>
           </select>
         </div>
-        <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700">Mettre à jour</button>
+        <button type="submit" class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700">
+          {% include "core/partials/ui_icon.html" with icon="arrow-path" css_class="w-4 h-4 text-white" %}
+          Mettre à jour
+        </button>
       </form>
     </div>
 
     <div class="bg-white border border-gray-200 rounded p-4">
-      <div class="font-semibold mb-3">Courbe (cumul net)</div>
+      <div class="font-semibold mb-3 flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="chart-bar" css_class="w-5 h-5 text-indigo-600" %}
+        Courbe (cumul net)
+      </div>
       <canvas id="forecastChart" height="120"></canvas>
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script>
@@ -80,6 +95,7 @@
 
     <div class="bg-white border border-gray-200 rounded p-4">
       <div class="font-semibold mb-3">Ajouter une prévision</div>
+      {% if user_can_manage_sensitive %}
       <form method="post">
         {% csrf_token %}
         <input type="hidden" name="horizon_days" value="{{ horizon_days }}" />
@@ -121,6 +137,9 @@
           <button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded hover:bg-indigo-700">Enregistrer</button>
         </div>
       </form>
+      {% else %}
+        <p class="text-sm text-gray-600">La saisie des prévisions est réservée au <strong>gérant</strong> et au <strong>comptable</strong>.</p>
+      {% endif %}
     </div>
 
     <div class="bg-white border border-gray-200 rounded p-4">

@@ -3,11 +3,20 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Factures</h1>
-      <div class="flex gap-2">
-        <a class="border px-3 py-2 rounded text-sm hover:bg-gray-50" href="{% url 'invoicing:invoice_export_excel' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Export Excel</a>
-        <a class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" href="{% url 'invoicing:invoice_add' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="invoice" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Factures</span>
+      </h1>
+      <div class="flex gap-2 flex-wrap">
+        {% if user_can_manage_sensitive %}
+          <a class="inline-flex items-center gap-1.5 border px-3 py-2 rounded text-sm hover:bg-gray-50 text-gray-800" href="{% url 'invoicing:invoice_export_excel' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+            {% include "core/partials/ui_icon.html" with icon="arrow-down-tray" css_class="w-4 h-4 text-gray-500" %}
+            Export Excel
+          </a>
+        {% endif %}
+        <a class="inline-flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" href="{% url 'invoicing:invoice_add' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+          {% include "core/partials/ui_icon.html" with icon="plus" css_class="w-4 h-4 text-white" %}
           Nouvelle facture
         </a>
       </div>
@@ -37,7 +46,10 @@
             </select>
           </div>
         {% endif %}
-        <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Filtrer</button>
+        <button class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">
+          {% include "core/partials/ui_icon.html" with icon="funnel" css_class="w-4 h-4 text-white" %}
+          Filtrer
+        </button>
       </form>
     </div>
 
@@ -64,9 +76,31 @@
               <td class="py-2 px-4">{{ inv.get_status_display }}</td>
               <td class="py-2 px-4">{{ inv.total_ttc|floatformat:2 }}</td>
               <td class="py-2 px-4 whitespace-nowrap">
-                <a class="border px-3 py-1 rounded text-sm hover:bg-gray-50" href="{% url 'invoicing:invoice_pdf' inv.id %}{% if request.user.role == 'CABINET_ADMIN' %}?company_name={{ inv.company.nom|urlencode }}{% endif %}">
-                  PDF
-                </a>
+                <div class="flex flex-col gap-1.5">
+                  {% if inv.status != 'PAID' and inv.status != 'CANCELLED' %}
+                    {% if user_can_manage_sensitive or user_is_collaborator and inv.status == 'DRAFT' %}
+                      <a class="inline-flex items-center gap-1 text-indigo-700 text-sm hover:underline" href="{% url 'invoicing:invoice_edit' inv.id %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+                        Modifier
+                      </a>
+                    {% endif %}
+                  {% endif %}
+                  <a class="inline-flex items-center gap-1 text-gray-600 text-sm hover:underline" href="{% url 'invoicing:invoice_history' inv.id %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+                    Historique
+                  </a>
+                  {% if user_can_cancel_billing and inv.status != 'PAID' and inv.status != 'CANCELLED' %}
+                    <form method="post" action="{% url 'invoicing:invoice_cancel' inv.id %}" onsubmit="return confirm('Annuler cette facture ?');">
+                      {% csrf_token %}
+                      {% if request.user.role == "CABINET_ADMIN" and company_name %}
+                        <input type="hidden" name="company_name" value="{{ company_name }}" />
+                      {% endif %}
+                      <button class="text-sm text-red-600 hover:underline" type="submit">Annuler</button>
+                    </form>
+                  {% endif %}
+                  <a class="inline-flex items-center gap-1 border px-3 py-1 rounded text-sm hover:bg-gray-50" href="{% url 'invoicing:invoice_pdf' inv.id %}{% if request.user.role == 'CABINET_ADMIN' %}?company_name={{ inv.company.nom|urlencode }}{% endif %}">
+                    {% include "core/partials/ui_icon.html" with icon="document-pdf" css_class="w-4 h-4 text-gray-500" %}
+                    PDF
+                  </a>
+                </div>
               </td>
             </tr>
           {% empty %}
@@ -83,10 +117,10 @@
         <div>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
         <div class="flex gap-2">
           {% if page_obj.has_previous %}
-            <a class="border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Précédent</a>
+            <a class="inline-flex items-center gap-1 border px-3 py-2 rounded" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">{% include "core/partials/ui_icon.html" with icon="chevron-left" css_class="w-4 h-4" %}Précédent</a>
           {% endif %}
           {% if page_obj.has_next %}
-            <a class="border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant</a>
+            <a class="inline-flex items-center gap-1 border px-3 py-2 rounded" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">Suivant{% include "core/partials/ui_icon.html" with icon="chevron-right" css_class="w-4 h-4" %}</a>
           {% endif %}
         </div>
       </div>

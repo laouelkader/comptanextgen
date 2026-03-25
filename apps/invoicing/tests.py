@@ -199,7 +199,8 @@ class InvoicingMVPTests(TestCase):
         with patch.dict("sys.modules", {"weasyprint": fake_weasyprint}):
             resp = self.client.get(reverse("invoicing:invoice_pdf", args=[invoice.id]))
         self.assertEqual(resp.status_code, 200)
-        self.assertIn(b"Mode secours", resp.content)
+        self.assertContains(resp, "Détail des prestations")
+        self.assertContains(resp, invoice.number)
 
     def test_process_overdue_invoice_reminders_updates_invoice(self):
         invoice = Invoice.objects.create(

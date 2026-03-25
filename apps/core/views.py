@@ -6,6 +6,8 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.views import LogoutView
 from django.core.cache import cache
 from django.core.mail import send_mail
+from urllib.parse import urlencode
+
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import TemplateView
@@ -190,6 +192,10 @@ class DashboardView(TemplateView):
         except LookupError:
             pass
 
+        cabinet = getattr(self.request.user, "role", None) == "CABINET_ADMIN"
+        cn = (self.request.GET.get("company_name") or "").strip()
+        cabinet_company_q = ("?" + urlencode({"company_name": cn})) if (cabinet and cn) else ""
+
         ctx.update(
             {
                 "ca_mensuel": ca_mensuel,
@@ -197,6 +203,7 @@ class DashboardView(TemplateView):
                 "factures_impayees": factures_impayees,
                 "nb_ecritures_mois": nb_ecritures_mois,
                 "alertes": [],
+                "cabinet_company_q": cabinet_company_q,
             }
         )
         return ctx

@@ -7,7 +7,11 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pandas as pd
+
 from django.utils import timezone
+
+from .models import BankTransaction
+
 
 def simulate_bank_transactions(company_id: int, count: int = 10):
     """
@@ -29,6 +33,72 @@ def simulate_bank_transactions(company_id: int, count: int = 10):
             }
         )
     return txs
+
+
+def suggest_entry_lines_for_transaction(
+    tx: BankTransaction,
+    *,
+    days_window: int = 21,
+    limit: int = 20,
+) -> list[dict]:
+    """
+    Propose des lignes d'écriture (EntryLine) pour rapprocher une transaction bancaire :
+    même société (via le compte), montant net (débit − crédit) proche du flux bancaire,
+    date d'écriture dans une fenêtre autour de la date de transaction.
+    Exclut les lignes déjà liées à une transaction rapprochée.
+    """
+    from apps.accounting.models import EntryLine
+
+    company_id = tx.bank_account.company_id
+    start = tx.date - timedelta(days=days_window)
+    end = tx.date + timedelta(days=days_window)
+
+    used_line_ids = set(
+        BankTransaction.objects.filter(reconciled=True, reconciled_entry_id__isnull=False).values_list(
+            "reconciled_entry_id", flat=True
+        )
+    )
+
+    if tx.transaction_type == BankTransaction.Types.CREDIT:
+        signed_bank = tx.amount
+    else:
+        signed_bank = -tx.amount
+
+    qs = (
+        EntryLine.objects.select_related("entry", "account")
+        .filter(entry__company_id=company_id, entry__date__gte=start, entry__date__lte=end)
+        .exclude(pk__in=used_line_ids)
+    )
+
+    candidates: list[tuple[Decimal, int, EntryLine]] = []
+    for line in qs.iterator(chunk_size=200):
+        net = line.debit - line.credit
+        if abs(net - signed_bank) > Decimal("0.02") and abs(abs(net) - abs(tx.amount)) > Decimal("0.02"):
+            continue
+        day_diff = abs((line.entry.date - tx.date).days)
+        amount_penalty = abs(net - signed_bank)
+        score = day_diff * Decimal("1.0") + amount_penalty * Decimal("10.0")
+        candidates.append((score, day_diff, line))
+
+    candidates.sort(key=lambda x: (x[0], x[1]))
+    out: list[dict] = []
+    for score, day_diff, line in candidates[:limit]:
+        net = line.debit - line.credit
+        out.append(
+            {
+                "id": line.pk,
+                "score": score,
+                "day_diff": day_diff,
+                "entry_date": line.entry.date.isoformat(),
+                "entry_ref": line.entry.reference or "",
+                "entry_description": (line.entry.description or "")[:120],
+                "account": f"{line.account.account_number} — {line.account.name}",
+                "debit": str(line.debit),
+                "credit": str(line.credit),
+                "net": str(net),
+            }
+        )
+    return out
 
 
 def simple_transaction_suggestion(amount: Decimal, date, existing_transactions):

@@ -1,15 +1,29 @@
 {% extends "core/base.html" %}
-{% block title %}Nouvelle facture - ComptaNextGen{% endblock %}
+{% block title %}{% if edit_mode %}Modifier la facture{% else %}Nouvelle facture{% endif %} - ComptaNextGen{% endblock %}
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Créer une facture</h1>
-      <a class="text-sm text-indigo-700 hover:underline" href="{% url 'invoicing:invoice_list' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">Retour</a>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="invoice" css_class="w-8 h-8 text-indigo-600" %}
+        <span>{% if edit_mode %}Modifier {{ invoice.number }}{% else %}Créer une facture{% endif %}</span>
+      </h1>
+      <div class="flex items-center gap-3 flex-wrap">
+        {% if edit_mode %}
+          <a class="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-indigo-700" href="{% url 'invoicing:invoice_history' invoice.id %}{% if company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+            {% include "core/partials/ui_icon.html" with icon="document-text" css_class="w-4 h-4" %}
+            Historique
+          </a>
+        {% endif %}
+      <a class="inline-flex items-center gap-1.5 text-sm text-indigo-700 hover:underline" href="{% url 'invoicing:invoice_list' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+        {% include "core/partials/ui_icon.html" with icon="arrow-left" css_class="w-4 h-4" %}
+        Retour
+      </a>
+      </div>
     </div>
 
     <div class="bg-white border border-gray-200 rounded p-4">
-      <form method="post">
+      <form method="post" action="{% if edit_mode %}{% url 'invoicing:invoice_edit' invoice.id %}{% else %}{% url 'invoicing:invoice_add' %}{% endif %}">
         {% csrf_token %}
 
         {% if request.user.role == "CABINET_ADMIN" %}
@@ -126,7 +140,7 @@
 
         <div class="mt-5 flex justify-end">
           <button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded hover:bg-indigo-700">
-            Enregistrer
+            {% if edit_mode %}Enregistrer les modifications{% else %}Enregistrer{% endif %}
           </button>
         </div>
       </form>

@@ -17,7 +17,7 @@ class QuoteForm(forms.Form):
     client_address = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     client_siret = forms.CharField(required=False)
 
-    status = forms.ChoiceField(choices=[(v, v) for v, _ in Quote.Status.choices], required=False)
+    status = forms.ChoiceField(choices=[("", "—")] + list(Quote.Status.choices), required=False)
 
     notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
 
@@ -30,6 +30,8 @@ class InvoiceForm(forms.Form):
     client_email = forms.EmailField(required=False)
     client_address = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     client_siret = forms.CharField(required=False)
+
+    status = forms.ChoiceField(choices=[("", "—")] + list(Invoice.Status.choices), required=False)
 
     notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
 

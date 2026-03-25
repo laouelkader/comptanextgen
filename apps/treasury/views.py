@@ -19,10 +19,16 @@ from django.utils.decorators import method_decorator
 
 from apps.core.decorators import company_required
 from apps.core.models import Company
+from apps.core.permissions import can_access_treasury_sensitive_operations
 
 from .forms import BankReconciliationForm, CashForecastItemForm, ForecastFilterForm, ImportReconciliationUploadForm
 from .models import BankAccount, BankTransaction, CashForecastItem
-from .services import import_transactions_from_csv, import_transactions_from_excel, simulate_bank_transactions
+from .services import (
+    import_transactions_from_csv,
+    import_transactions_from_excel,
+    simulate_bank_transactions,
+    suggest_entry_lines_for_transaction,
+)
 
 
 def _cabinet_admin(request: HttpRequest) -> bool:
@@ -104,21 +110,33 @@ class BankReconciliationView(LoginRequiredMixin, View):
         paginator = Paginator(txs, 25)
         page = int(request.GET.get("page") or 1)
         page_obj = paginator.get_page(page)
+
+        rows_with_suggestions = []
+        for t in page_obj.object_list:
+            suggs = suggest_entry_lines_for_transaction(t) if company is not None else []
+            rows_with_suggestions.append((t, suggs))
+
         return render(
             request,
             self.template_name,
             {
                 "page_obj": page_obj,
+                "rows_with_suggestions": rows_with_suggestions,
                 "form": BankReconciliationForm(),
                 "upload_form": ImportReconciliationUploadForm(),
                 "bank_account_id": account_id,
                 "accounts": accounts_qs,
                 "company_name": request.GET.get("company_name"),
+                "company_id": company.pk if company else None,
                 "companies": _companies_for_request(request),
             },
         )
 
     def post(self, request: HttpRequest):
+        if not can_access_treasury_sensitive_operations(request.user):
+            messages.error(request, "Import et rapprochement réservés au gérant et au comptable.")
+            return redirect("treasury:reconciliation")
+
         company = _resolve_company(request)
         if company is None:
             messages.error(request, "Entreprise introuvable (nom ou ID).")
@@ -252,6 +270,11 @@ class CashForecastView(LoginRequiredMixin, View):
         return redirect("treasury:forecast")
 
     def post(self, request: HttpRequest):
+        if not can_access_treasury_sensitive_operations(request.user):
+            messages.error(request, "La saisie des prévisions est réservée au gérant et au comptable.")
+            company = _resolve_company(request)
+            return self._forecast_redirect(request, company)
+
         company = _resolve_company(request)
         if company is None:
             messages.error(

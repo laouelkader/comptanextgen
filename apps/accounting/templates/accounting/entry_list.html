@@ -3,9 +3,13 @@
 
 {% block content %}
   <div class="max-w-6xl mx-auto space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Écritures</h1>
-      <a class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" href="{% url 'accounting:entry_add' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="document-text" css_class="w-8 h-8 text-indigo-600" %}
+        <span>Écritures</span>
+      </h1>
+      <a class="inline-flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" href="{% url 'accounting:entry_add' %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}?company_name={{ company_name|urlencode }}{% endif %}">
+        {% include "core/partials/ui_icon.html" with icon="plus" css_class="w-4 h-4 text-white" %}
         Ajouter une écriture
       </a>
     </div>
@@ -44,7 +48,10 @@
               </select>
             </div>
           {% endif %}
-          <button class="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">Filtrer</button>
+          <button class="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" type="submit">
+            {% include "core/partials/ui_icon.html" with icon="funnel" css_class="w-4 h-4 text-white" %}
+            Filtrer
+          </button>
         </div>
       </form>
     </div>
@@ -58,6 +65,7 @@
             <th class="py-2 px-4">Description</th>
             <th class="py-2 px-4">Validée</th>
             <th class="py-2 px-4">Créée le</th>
+            <th class="py-2 px-4">Actions</th>
           </tr>
         </thead>
         <tbody class="text-gray-800">
@@ -70,10 +78,27 @@
                 {% if e.validated %}<span class="text-green-700 font-semibold">Oui</span>{% else %}<span class="text-red-700 font-semibold">Non</span>{% endif %}
               </td>
               <td class="py-2 px-4 whitespace-nowrap">{{ e.created_at }}</td>
+              <td class="py-2 px-4 whitespace-nowrap">
+                {% if user_can_manage_sensitive and not e.validated %}
+                  <form method="post" action="{% url 'accounting:entry_validate' e.id %}" class="inline">
+                    {% csrf_token %}
+                    {% if company_name %}
+                      <input type="hidden" name="company_name" value="{{ company_name }}" />
+                    {% endif %}
+                    <button type="submit" class="text-sm border border-green-200 text-green-800 px-2 py-1 rounded hover:bg-green-50">
+                      Valider
+                    </button>
+                  </form>
+                {% elif not e.validated and user_is_collaborator %}
+                  <span class="text-xs text-gray-400">En attente validation</span>
+                {% else %}
+                  <span class="text-gray-300">—</span>
+                {% endif %}
+              </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="5" class="py-6 px-4 text-gray-500">Aucune écriture pour la période filtrée.</td>
+              <td colspan="6" class="py-6 px-4 text-gray-500">Aucune écriture pour la période filtrée.</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -87,13 +112,13 @@
         </div>
         <div class="flex gap-2">
           {% if page_obj.has_previous %}
-            <a class="border px-3 py-2 rounded text-sm" href="?page={{ page_obj.previous_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if account %}&account={{ account }}{% endif %}{% if validated %}&validated={{ validated }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
-              Précédent
+            <a class="inline-flex items-center gap-1 border px-3 py-2 rounded text-sm" href="?page={{ page_obj.previous_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if account %}&account={{ account }}{% endif %}{% if validated %}&validated={{ validated }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
+              {% include "core/partials/ui_icon.html" with icon="chevron-left" css_class="w-4 h-4" %}Précédent
             </a>
           {% endif %}
           {% if page_obj.has_next %}
-            <a class="border px-3 py-2 rounded text-sm" href="?page={{ page_obj.next_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if account %}&account={{ account }}{% endif %}{% if validated %}&validated={{ validated }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
-              Suivant
+            <a class="inline-flex items-center gap-1 border px-3 py-2 rounded text-sm" href="?page={{ page_obj.next_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if account %}&account={{ account }}{% endif %}{% if validated %}&validated={{ validated }}{% endif %}{% if request.user.role == 'CABINET_ADMIN' and company_name %}&company_name={{ company_name|urlencode }}{% endif %}">
+              Suivant{% include "core/partials/ui_icon.html" with icon="chevron-right" css_class="w-4 h-4" %}
             </a>
           {% endif %}
         </div>

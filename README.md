@@ -57,7 +57,12 @@ Fichier : `.env`
 En mode **DEBUG**, la page de connexion affiche un rappel des comptes démo.
 
 ## Générer des données démo
-- `./scripts/create_demo_data.sh`
+Après `loaddata fixtures/initial_data.json`, enrichissez l’interface avec des jeux fictifs (clients, devis, factures, écritures, trésorerie, alertes) :
+
+- **Recommandé (tous OS)** : `python manage.py create_demo_data`
+- **Remplacer** une ancienne génération démo : `python manage.py create_demo_data --replace` (supprime les enregistrements marqués démo puis recrée le jeu)
+- **Reproductible** : `python manage.py create_demo_data --replace --seed 42`
+- Sous Git Bash / Linux : `./scripts/create_demo_data.sh` (appelle la commande ci-dessus)
 
 ## Lancer le serveur
 - En local : `python manage.py runserver` puis ouvrir **http://127.0.0.1:8000/** ou **http://localhost:8000/**
@@ -80,6 +85,9 @@ En mode **DEBUG**, la page de connexion affiche un rappel des comptes démo.
 ## Sélection d’entreprise (rôle cabinet)
 - Dans l’interface, le paramètre d’URL utilisé est `company_name` (nom exact de l’entreprise, insensible à la casse), par ex. `?company_name=Alpha%20SARL`.
 - L’ancien paramètre `company_id` reste accepté en secours pour les liens ou scripts existants.
+
+## Documentation
+- **Vue d’ensemble du fonctionnement** (rôles, modules, parcours métier, sans jargon comptable) : [`docs/COMMENT_CA_MARCHE.md`](docs/COMMENT_CA_MARCHE.md)
 
 ## Structure (résumé)
 - `comptanextgen/` : configuration Django

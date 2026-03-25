@@ -188,6 +188,26 @@ class AccountingMVPTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("application/pdf", resp["Content-Type"])
 
+    def test_financial_statements_pdf_weasyprint_fails_returns_printable_html(self):
+        self.force_login()
+        self.create_validated_entry(debit_account=self.charge, credit_account=self.produit, amount=Decimal("10.00"))
+
+        fake_html_instance = MagicMock()
+        fake_html_instance.write_pdf.side_effect = OSError("weasyprint system libs missing")
+        fake_weasyprint = MagicMock()
+        fake_weasyprint.HTML.return_value = fake_html_instance
+
+        with patch.dict("sys.modules", {"weasyprint": fake_weasyprint}):
+            resp = self.client.get(
+                reverse("accounting:statements_pdf")
+                + f"?start_date={self.start.isoformat()}&end_date={self.end.isoformat()}&validated_only=1"
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("text/html", resp["Content-Type"])
+        self.assertContains(resp, "États financiers synthétiques")
+        self.assertContains(resp, "Bilan simplifié")
+
     def test_entry_list_pagination(self):
         self.force_login()
         # 30 entrées => 25 sur la page 1 (MVP)

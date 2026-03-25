@@ -3,8 +3,14 @@
 
 {% block content %}
   <div class="bg-white border border-gray-200 rounded p-5">
-    <h1 class="text-xl font-bold mb-2">
-      {% if two_factor_required %}Vérification 2FA{% else %}Connexion{% endif %}
+    <h1 class="text-xl font-bold mb-2 flex items-center gap-2">
+      {% if two_factor_required %}
+        {% include "core/partials/ui_icon.html" with icon="bell" css_class="w-7 h-7 text-indigo-600" %}
+        <span>Vérification 2FA</span>
+      {% else %}
+        {% include "core/partials/ui_icon.html" with icon="home" css_class="w-7 h-7 text-indigo-600" %}
+        <span>Connexion</span>
+      {% endif %}
     </h1>
     <p class="text-sm text-gray-600 mb-4">
       {% if two_factor_required %}
@@ -18,7 +24,8 @@
       <form method="post" class="space-y-4">
         {% csrf_token %}
         {{ two_factor_form.as_p }}
-        <button class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
+        <button class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
+          {% include "core/partials/ui_icon.html" with icon="arrow-path" css_class="w-4 h-4 text-white" %}
           Valider
         </button>
       </form>
@@ -26,7 +33,8 @@
       <form method="post" class="space-y-4">
         {% csrf_token %}
         {{ login_form.as_p }}
-        <button class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
+        <button class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
+          {% include "core/partials/ui_icon.html" with icon="arrow-right-circle" css_class="w-4 h-4 text-white" %}
           Se connecter
         </button>
       </form>

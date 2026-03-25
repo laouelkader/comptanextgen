@@ -7,11 +7,20 @@ from .models import BankTransaction, CashForecastItem
 
 class BankReconciliationForm(forms.Form):
     """
-    MVP : on permet de marquer une transaction comme rapprochée.
+    Rapprochement : transaction bancaire + ligne d'écriture optionnelle.
     """
 
     bank_transaction_id = forms.IntegerField()
-    reconciled_entry_id = forms.IntegerField(required=False)
+    reconciled_entry_id = forms.CharField(required=False)
+
+    def clean_reconciled_entry_id(self):
+        v = (self.cleaned_data.get("reconciled_entry_id") or "").strip()
+        if not v:
+            return None
+        try:
+            return int(v)
+        except ValueError:
+            raise forms.ValidationError("Ligne d’écriture invalide.")
 
 
 class ForecastFilterForm(forms.Form):

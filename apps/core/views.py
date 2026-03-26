@@ -2,8 +2,7 @@ import secrets
 from datetime import timedelta
 
 from django.contrib import messages
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.views import LogoutView
+from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
 from django.core.mail import send_mail
 from urllib.parse import urlencode
@@ -264,6 +263,19 @@ class AdminDashboardView(TemplateView):
         return redirect("core:admin_dashboard")
 
 
-class CustomLogoutView(LogoutView):
-    next_page = "/login/"
+class CustomLogoutView(TemplateView):
+    template_name = "core/logout_confirm.html"
+
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect("core:login")
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        # Confirme la déconnexion via formulaire POST (évite un logout involontaire par simple lien).
+        if request.POST.get("confirm") == "yes":
+            logout(request)
+            messages.success(request, "Vous êtes déconnecté.")
+            return redirect("core:login")
+        return redirect("core:dashboard")
 

@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% block title %}Confirmer la deconnexion - ComptaNextGen{% endblock %}
+
+{% block content %}
+  <div class="w-full max-w-xl mx-auto">
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+      <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+        {% include "core/partials/ui_icon.html" with icon="arrow-left" css_class="w-5 h-5 text-red-600" %}
+        Confirmer la deconnexion
+      </h1>
+      <p class="mt-3 text-sm text-gray-600">
+        Voulez-vous vraiment vous deconnecter de votre session ?
+      </p>
+
+      <form method="post" class="mt-6 flex items-center gap-3">
+        {% csrf_token %}
+        <button
+          type="submit"
+          name="confirm"
+          value="yes"
+          class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-4 py-2 hover:bg-red-700"
+        >
+          Se deconnecter
+        </button>
+        <button
+          type="submit"
+          name="confirm"
+          value="no"
+          class="inline-flex items-center gap-2 rounded-lg border border-gray-300 text-gray-700 px-4 py-2 hover:bg-gray-50"
+        >
+          Annuler
+        </button>
+      </form>
+    </div>
+  </div>
+{% endblock %}

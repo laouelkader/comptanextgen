@@ -2,8 +2,8 @@
 
 ## Prérequis
 - Python 3.10+
-- PostgreSQL (ou SQLite en dev)
-- Node.js (pour builder Tailwind via npm)
+- PostgreSQL
+- Node.js 
 
 ## Installation
 1. Créer un environnement virtuel :

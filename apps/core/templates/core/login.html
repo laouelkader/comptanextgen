@@ -2,61 +2,115 @@
 {% block title %}Connexion - ComptaNextGen{% endblock %}
 
 {% block content %}
-  <div class="bg-white border border-gray-200 rounded p-5">
-    <h1 class="text-xl font-bold mb-2 flex items-center gap-2">
-      {% if two_factor_required %}
-        {% include "core/partials/ui_icon.html" with icon="bell" css_class="w-7 h-7 text-indigo-600" %}
-        <span>Vérification 2FA</span>
-      {% else %}
-        {% include "core/partials/ui_icon.html" with icon="home" css_class="w-7 h-7 text-indigo-600" %}
-        <span>Connexion</span>
-      {% endif %}
-    </h1>
-    <p class="text-sm text-gray-600 mb-4">
-      {% if two_factor_required %}
-        Saisissez le code à 6 chiffres envoyé par email.
-      {% else %}
-        Authentifiez-vous pour accéder à votre espace.
-      {% endif %}
-    </p>
+  <div class="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 rounded-2xl shadow-xl border border-indigo-400/30">
+    <div class="absolute -top-16 -left-16 w-48 h-48 rounded-full bg-white/10 blur-xl"></div>
+    <div class="absolute -bottom-20 -right-10 w-56 h-56 rounded-full bg-cyan-300/20 blur-2xl"></div>
 
-    {% if two_factor_required %}
-      <form method="post" class="space-y-4">
-        {% csrf_token %}
-        {{ two_factor_form.as_p }}
-        <button class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
-          {% include "core/partials/ui_icon.html" with icon="arrow-path" css_class="w-4 h-4 text-white" %}
-          Valider
-        </button>
-      </form>
-    {% else %}
-      <form method="post" class="space-y-4">
-        {% csrf_token %}
-        {{ login_form.as_p }}
-        <button class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700" type="submit">
-          {% include "core/partials/ui_icon.html" with icon="arrow-right-circle" css_class="w-4 h-4 text-white" %}
-          Se connecter
-        </button>
-      </form>
+    <div class="relative p-8 lg:p-10">
+      <div class="mb-5 text-white">
+        <p class="text-xs uppercase tracking-[0.2em] text-indigo-100">ComptaNextGen</p>
+        <h1 class="text-2xl font-bold mt-1 flex items-center gap-2">
+          {% if two_factor_required %}
+            {% include "core/partials/ui_icon.html" with icon="bell" css_class="w-7 h-7 text-white" %}
+            <span>Vérification sécurisée</span>
+          {% else %}
+            {% include "core/partials/ui_icon.html" with icon="home" css_class="w-7 h-7 text-white" %}
+            <span>Bienvenue sur votre espace</span>
+          {% endif %}
+        </h1>
+        <p class="text-sm text-indigo-100 mt-1">
+          {% if two_factor_required %}
+            Entrez le code reçu par email pour finaliser la connexion.
+          {% else %}
+            Gérez votre comptabilité, facturation et trésorerie sur une interface unifiée.
+          {% endif %}
+        </p>
+      </div>
 
-      {% if is_debug %}
-        <div class="mt-6 border-t border-gray-200 pt-4 text-xs text-gray-600 space-y-2">
-          <p class="font-semibold text-gray-800">Comptes de démonstration (fixture)</p>
-          <p>Même mot de passe pour tous : <code class="bg-gray-100 px-1 rounded">Aa!234567</code></p>
-          <ul class="list-disc ml-4 space-y-1">
-            <li><strong>admin@comptanextgen.fr</strong> — Cabinet (toutes entreprises, menu « Admin Dashboard », Django admin)</li>
-            <li><strong>gerant.alpha@alpha.fr</strong> — Gérant Alpha SARL</li>
-            <li><strong>comptable.alpha@alpha.fr</strong> — Comptable Alpha SARL</li>
-            <li><strong>collab.alpha@alpha.fr</strong> — Collaborateur Alpha SARL</li>
-            <li><strong>gerant.beta@beta.fr</strong> — Gérant Beta SAS</li>
-            <li><strong>comptable.beta@beta.fr</strong> — Comptable Beta SAS</li>
-            <li><strong>gerant.gamma@gamma.fr</strong> — Gérant Gamma EURL</li>
-            <li><strong>comptable.gamma@gamma.fr</strong> — Comptable Gamma EURL</li>
-          </ul>
-          <p class="text-gray-500">Pour tester un autre profil : déconnexion puis connexion avec un autre email.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+        <div class="rounded-xl bg-white/15 border border-white/20 p-3 text-white">
+          <div class="flex items-center gap-2 mb-1">
+            {% include "core/partials/ui_icon.html" with icon="document-text" css_class="w-4 h-4 text-cyan-200" %}
+            <span class="text-xs font-semibold uppercase tracking-wide">Facturation</span>
+          </div>
+          <p class="text-xs text-indigo-100">Suivi des devis, factures et encaissements.</p>
         </div>
-      {% endif %}
-    {% endif %}
+        <div class="rounded-xl bg-white/15 border border-white/20 p-3 text-white">
+          <div class="flex items-center gap-2 mb-1">
+            {% include "core/partials/ui_icon.html" with icon="wallet" css_class="w-4 h-4 text-cyan-200" %}
+            <span class="text-xs font-semibold uppercase tracking-wide">Trésorerie</span>
+          </div>
+          <p class="text-xs text-indigo-100">Prévisions, rapprochement et alertes en temps réel.</p>
+        </div>
+        <div class="rounded-xl bg-white/15 border border-white/20 p-3 text-white">
+          <div class="flex items-center gap-2 mb-1">
+            {% include "core/partials/ui_icon.html" with icon="chart-bar" css_class="w-4 h-4 text-cyan-200" %}
+            <span class="text-xs font-semibold uppercase tracking-wide">Pilotage</span>
+          </div>
+          <p class="text-xs text-indigo-100">Indicateurs clés pour un pilotage rapide.</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-6 lg:p-8 border border-indigo-100 shadow-lg">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-6 items-stretch">
+          <div class="order-2 md:order-1 md:col-span-3">
+            {% if two_factor_required %}
+              <form method="post" class="space-y-4">
+                {% csrf_token %}
+                {{ two_factor_form.as_p }}
+                <button class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" type="submit">
+                  {% include "core/partials/ui_icon.html" with icon="arrow-path" css_class="w-4 h-4 text-white" %}
+                  Valider le code
+                </button>
+              </form>
+            {% else %}
+              <form method="post" class="space-y-4">
+                {% csrf_token %}
+                {{ login_form.as_p }}
+                <button class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" type="submit">
+                  {% include "core/partials/ui_icon.html" with icon="arrow-right-circle" css_class="w-4 h-4 text-white" %}
+                  Se connecter
+                </button>
+              </form>
+
+              {% if is_debug %}
+                <div class="mt-6 border-t border-gray-200 pt-4 text-xs text-gray-600 space-y-2">
+                  <p class="font-semibold text-gray-800">Comptes de démonstration (fixture)</p>
+                  <p>Même mot de passe pour tous : <code class="bg-gray-100 px-1 rounded">Aa!234567</code></p>
+                  <ul class="list-disc ml-4 space-y-1">
+                    <li><strong>admin@comptanextgen.fr</strong> — Cabinet (toutes entreprises, menu « Admin Dashboard », Django admin)</li>
+                    <li><strong>gerant.alpha@alpha.fr</strong> — Gérant Alpha SARL</li>
+                    <li><strong>comptable.alpha@alpha.fr</strong> — Comptable Alpha SARL</li>
+                    <li><strong>collab.alpha@alpha.fr</strong> — Collaborateur Alpha SARL</li>
+                    <li><strong>gerant.beta@beta.fr</strong> — Gérant Beta SAS</li>
+                    <li><strong>comptable.beta@beta.fr</strong> — Comptable Beta SAS</li>
+                    <li><strong>gerant.gamma@gamma.fr</strong> — Gérant Gamma EURL</li>
+                    <li><strong>comptable.gamma@gamma.fr</strong> — Comptable Gamma EURL</li>
+                  </ul>
+                  <p class="text-gray-500">Pour tester un autre profil : déconnexion puis connexion avec un autre email.</p>
+                </div>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          <div class="order-1 md:order-2 md:col-span-2 relative rounded-xl overflow-hidden border border-indigo-100 bg-gradient-to-br from-slate-900 via-indigo-900 to-violet-900 min-h-[300px] hidden md:block">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.20),transparent_40%),radial-gradient(circle_at_80%_30%,rgba(56,189,248,0.25),transparent_45%),radial-gradient(circle_at_50%_85%,rgba(129,140,248,0.30),transparent_45%)]"></div>
+
+            <div class="absolute top-6 left-6 w-24 h-24 rounded-2xl rotate-12 bg-gradient-to-br from-cyan-300 to-blue-500 shadow-[0_20px_35px_rgba(14,116,144,0.45)] opacity-95"></div>
+            <div class="absolute top-20 right-8 w-20 h-20 rounded-full bg-gradient-to-br from-indigo-200 to-indigo-500 shadow-[0_18px_30px_rgba(79,70,229,0.5)]"></div>
+            <div class="absolute bottom-10 left-14 w-28 h-16 rounded-[1.2rem] -rotate-6 bg-gradient-to-r from-fuchsia-300 to-violet-500 shadow-[0_18px_28px_rgba(126,34,206,0.45)]"></div>
+            <div class="absolute bottom-6 right-6 w-16 h-16 rounded-xl rotate-6 bg-gradient-to-b from-emerald-300 to-teal-500 shadow-[0_16px_26px_rgba(13,148,136,0.45)]"></div>
+
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center text-white/90">
+                <p class="text-xs uppercase tracking-[0.2em] text-cyan-100">Interface moderne</p>
+                <p class="text-lg font-semibold mt-1">Connexion rapide et securisee</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 {% endblock %}
 

@@ -154,7 +154,7 @@
         </header>
 
         <main class="p-4 {% if not request.user.is_authenticated %}flex items-center justify-center{% endif %}">
-          <div class="{% if request.user.is_authenticated %}max-w-6xl mx-auto{% else %}w-full max-w-md mx-auto{% endif %}">
+          <div class="{% if request.user.is_authenticated %}max-w-6xl mx-auto{% elif request.resolver_match and request.resolver_match.url_name == 'login' %}w-full max-w-6xl mx-auto{% else %}w-full max-w-md mx-auto{% endif %}">
             <!-- Messages en mode non-auth -->
             {% if not request.user.is_authenticated and messages %}
               <div class="space-y-2 mb-4">

@@ -1,10 +1,6 @@
-import secrets
-from datetime import timedelta
-
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
-from django.core.mail import send_mail
 from urllib.parse import urlencode
 
 from django.shortcuts import redirect
@@ -12,7 +8,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from .decorators import cabinet_admin_only, company_required
-from .forms import CompanyForm, LoginForm, TwoFactorForm
+from .forms import CompanyForm, LoginForm
 from .models import Company, User
 
 
@@ -28,32 +24,21 @@ class LoginView(TemplateView):
 
     RATE_LIMIT_MAX = 5
     RATE_LIMIT_TTL_SECONDS = 15 * 60
-    TWO_FACTOR_EXPIRY_SECONDS = 5 * 60
 
     def get(self, request, *args, **kwargs):
-        pending_user_id = request.session.get("two_factor_pending_user_id")
-        code_created_at = request.session.get("two_factor_code_created_at")
-
-        two_factor_required = False
-        if pending_user_id and code_created_at:
-            created_at = timezone.datetime.fromisoformat(code_created_at)
-            two_factor_required = timezone.now() <= created_at + timedelta(seconds=self.TWO_FACTOR_EXPIRY_SECONDS)
+        # Toujours afficher d'abord l'authentification email/mot de passe à l'ouverture de /login.
+        for k in ["two_factor_pending_user_id", "two_factor_code", "two_factor_code_created_at"]:
+            request.session.pop(k, None)
+        request.session.modified = True
 
         return self.render_to_response(
             {
                 "login_form": LoginForm(),
-                "two_factor_form": TwoFactorForm(),
-                "two_factor_required": two_factor_required,
+                "two_factor_required": False,
             }
         )
 
     def post(self, request, *args, **kwargs):
-        pending_user_id = request.session.get("two_factor_pending_user_id")
-        code_created_at = request.session.get("two_factor_code_created_at")
-
-        if pending_user_id and code_created_at:
-            return self._handle_two_factor(request, pending_user_id)
-
         return self._handle_password_login(request)
 
     def _handle_password_login(self, request):
@@ -68,82 +53,19 @@ class LoginView(TemplateView):
         form = LoginForm(request.POST)
         if not form.is_valid():
             messages.error(request, "Formulaire invalide.")
-            return self.render_to_response(
-                {"login_form": form, "two_factor_form": TwoFactorForm(), "two_factor_required": False}
-            )
+            return self.render_to_response({"login_form": form, "two_factor_required": False})
 
         user = authenticate(request, email=form.cleaned_data["email"], password=form.cleaned_data["password"])
         if not user:
             cache.set(cache_key, attempts + 1, timeout=self.RATE_LIMIT_TTL_SECONDS)
             messages.error(request, "Email ou mot de passe incorrect.")
-            return self.render_to_response(
-                {"login_form": form, "two_factor_form": TwoFactorForm(), "two_factor_required": False}
-            )
+            return self.render_to_response({"login_form": form, "two_factor_required": False})
 
         cache.delete(cache_key)
 
         if not user.is_active:
             messages.error(request, "Votre compte est désactivé.")
-            return self.render_to_response(
-                {"login_form": form, "two_factor_form": TwoFactorForm(), "two_factor_required": False}
-            )
-
-        if user.two_factor_enabled:
-            code = str(secrets.randbelow(1_000_000)).zfill(6)
-            now = timezone.now()
-
-            request.session["two_factor_pending_user_id"] = user.id
-            request.session["two_factor_code"] = code
-            request.session["two_factor_code_created_at"] = now.isoformat()
-            request.session.modified = True
-
-            send_mail(
-                subject="Votre code de vérification 2FA",
-                message=f"Votre code 2FA est : {code}",
-                from_email=None,
-                recipient_list=[user.email],
-            )
-
-            messages.info(request, "Code 2FA envoyé. Veuillez le saisir.")
-            return redirect("core:login")
-
-        login(request, user)
-        return redirect("core:dashboard")
-
-    def _handle_two_factor(self, request, pending_user_id: int):
-        form = TwoFactorForm(request.POST)
-        if not form.is_valid():
-            messages.error(request, "Code 2FA invalide.")
-            return self.render_to_response(
-                {"login_form": LoginForm(), "two_factor_form": form, "two_factor_required": True}
-            )
-
-        created_at_raw = request.session.get("two_factor_code_created_at")
-        if not created_at_raw:
-            return redirect("core:login")
-
-        created_at = timezone.datetime.fromisoformat(created_at_raw)
-        if timezone.now() > created_at + timedelta(seconds=self.TWO_FACTOR_EXPIRY_SECONDS):
-            for k in ["two_factor_pending_user_id", "two_factor_code", "two_factor_code_created_at"]:
-                request.session.pop(k, None)
-            messages.error(request, "Code 2FA expiré. Veuillez vous reconnecter.")
-            return redirect("core:login")
-
-        expected = request.session.get("two_factor_code")
-        if form.cleaned_data["code"] != expected:
-            messages.error(request, "Code 2FA incorrect.")
-            return self.render_to_response(
-                {"login_form": LoginForm(), "two_factor_form": form, "two_factor_required": True}
-            )
-
-        user = User.objects.filter(pk=pending_user_id).first()
-        if not user or not user.is_active:
-            messages.error(request, "Compte introuvable ou désactivé.")
-            return redirect("core:login")
-
-        for k in ["two_factor_pending_user_id", "two_factor_code", "two_factor_code_created_at"]:
-            request.session.pop(k, None)
-        request.session.modified = True
+            return self.render_to_response({"login_form": form, "two_factor_required": False})
 
         login(request, user)
         return redirect("core:dashboard")
@@ -275,7 +197,6 @@ class CustomLogoutView(TemplateView):
         # Confirme la déconnexion via formulaire POST (évite un logout involontaire par simple lien).
         if request.POST.get("confirm") == "yes":
             logout(request)
-            messages.success(request, "Vous êtes déconnecté.")
             return redirect("core:login")
         return redirect("core:dashboard")
 

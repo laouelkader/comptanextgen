@@ -157,6 +157,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@comptanextgen.fr")
+TWO_FACTOR_TARGET_EMAIL = config("TWO_FACTOR_TARGET_EMAIL", default="")
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 

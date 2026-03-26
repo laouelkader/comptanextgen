@@ -117,6 +117,7 @@
             <div class="flex items-center gap-3">
               <span class="text-xs text-gray-500 hidden sm:inline">{{ request.user.role }}</span>
               <a
+                id="logoutLink"
                 class="inline-flex items-center gap-1.5 text-sm text-red-600 hover:underline"
                 href="{% url 'core:logout' %}"
               >
@@ -125,6 +126,10 @@
               </a>
             </div>
           </div>
+          <form id="logoutForm" method="post" action="{% url 'core:logout' %}" class="hidden">
+            {% csrf_token %}
+            <input type="hidden" name="confirm" value="yes" />
+          </form>
 
           {% if user_is_collaborator %}
             <div class="px-4 pb-2">
@@ -171,13 +176,8 @@
       </div>
     </div>
 
-    <script>
-      const sidebar = document.querySelector('aside');
-      const toggle = document.getElementById('sidebarToggle');
-      if (toggle && sidebar) {
-        toggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
-      }
-    </script>
+    <script src="{% static 'js/layout.js' %}"></script>
+    <script src="{% static 'js/logout.js' %}"></script>
   </body>
 </html>
 
